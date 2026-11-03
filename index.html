@@ -86,7 +86,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.2.3';
+const VERSION='1.2.4';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -140,7 +140,7 @@ verifytitle:'Pengesahan kenderaan / peralatan',vfit:'LAYAK DIGUNAKAN DI TAPAK',v
 d_stnk:'STNK',d_pkb:'Cukai PKB / bukti SWDKLLJ',d_own:'Pemilikan (salinan BPKB) atau perjanjian sewa',d_ins:'Insurans',d_sim:'SIM pemandu',d_mcu:'Sijil sihat (MCU)',d_ddc:'Sijil defensive driving',d_photo:'Gambar (4 sisi + plat / unit)',d_chk:'Senarai semak pra-mobilisasi (bertandatangan)',d_kir:'Ujian berkala KIR',d_b3:'Permit B3 / kad TREM / SDS',d_silo:'SILO (Disnaker)',d_rep:'Laporan pemeriksaan & ujian beban PJK3',d_sio:'SIO pengendali',d_rig:'Sijil rigger / signalman',d_man:'Manual / load chart / data plate',d_mnt:'Rekod penyelenggaraan',
 c_lights:'Lampu dan isyarat berfungsi',c_brakes:'Brek dan brek tangan',c_tyres:'Tayar dan tayar ganti',c_horn:'Hon',c_rev:'Penggera / kamera undur',c_belts:'Tali pinggang keselamatan (semua kerusi)',c_mirrors:'Cermin, cermin depan, pengelap',c_leaks:'Tiada kebocoran cecair',c_fire:'Pemadam api (tag sah)',c_aid:'Kit pertolongan cemas',c_chock:'Penahan roda / segi tiga amaran',c_body:'Tiada kerosakan / kecacatan',c_ivms:'IVMS / pengehad kelajuan dipasang',c_interior:'Kabin bersih, tiada barang longgar',c_cargo:'Pengikat muatan / badan selamat',c_hyd:'Sistem hidraulik, tiada bocor',c_steer:'Brek dan stereng',c_safety:'Alat keselamatan (limit switch, penggera beban lebih)',c_alarms:'Penggera, hon, beacon, lampu',c_rops:'Tali pinggang, ROPS / FOPS',c_guards:'Pengadang dan penutup dipasang',c_under:'Track / tayar / outrigger',c_plate:'Data plate dan load chart kelihatan',c_spark:'Spark arrestor (kawasan berbahaya)',c_rope:'Keadaan boom, tali dawai, cangkuk'}
 };
-let lang=localStorage.getItem('evr_lang')||'en',tab='register',items=[],docs=[],stickers=[],contacts=[],user=null,token=sessionStorage.getItem('evr_tok')||'',authMode='login',note='',cur='',upk='';
+let lang=localStorage.getItem('evr_lang')||'en',tab='register',items=[],docs=[],stickers=[],contacts=[],user=null,token=localStorage.getItem('evr_tok')||'',authMode='login',note='',cur='',upk='';
 const $=s=>document.querySelector(s),t=k=>(T[lang][k]||T.en[k]||k);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dlg=$('#dlg'),isHSSE=()=>user&&user.role==='HSSE',canWork=()=>user&&(user.role==='HSSE'||user.role==='IC');
@@ -188,11 +188,11 @@ function renderAuth(){const f=authMode;
   ${f==='login'?`<div style="height:10px"></div><label>${t('pin')}</label><input id="a_p" type="password" inputmode="numeric" autocomplete="current-password"><div class="row"><button class="btn" onclick="doLogin()">${t('signin')}</button><button class="btn sec" onclick="authMode='reset';note='';render()">${t('forgot')}</button></div>`:''}
   ${f==='reset'?`<div class="row"><button class="btn" onclick="doReset()">${t('sendcode')}</button><button class="btn sec" onclick="authMode='login';note='';render()">${t('back')}</button></div>`:''}
   ${f==='setpin'?`<div style="height:10px"></div><label>${t('code')}</label><input id="a_c" inputmode="numeric"><div style="height:10px"></div><label>${t('newpin')}</label><input id="a_p" type="password" inputmode="numeric" autocomplete="new-password"><div class="row"><button class="btn" onclick="doSetPin()">${t('savepin')}</button><button class="btn sec" onclick="authMode='login';note='';render()">${t('back')}</button></div>`:''}</div>`;}
-async function doLogin(){try{const r=await api('login',{email:$('#a_e').value,pin:$('#a_p').value});token=r.token;user=r.user;sessionStorage.setItem('evr_tok',token);await load();}catch(e){errNote(e);render();}}
+async function doLogin(){try{const r=await api('login',{email:$('#a_e').value,pin:$('#a_p').value});token=r.token;user=r.user;localStorage.setItem('evr_tok',token);await load();}catch(e){errNote(e);render();}}
 async function doReset(){try{const em=$('#a_e').value;await api('requestReset',{email:em});authMode='setpin';note=t('codesent');render();$('#a_e').value=em;}catch(e){errNote(e);render();}}
 async function doSetPin(){try{await api('setPin',{email:$('#a_e').value,code:$('#a_c').value,pin:$('#a_p').value});authMode='login';note=t('pinset');render();}catch(e){errNote(e);render();}}
-function signout(){token='';user=null;sessionStorage.removeItem('evr_tok');render();}
-async function load(){try{const r=await api('list');user=r.user;items=r.items;docs=r.docs;stickers=r.stickers;}catch(e){token='';user=null;sessionStorage.removeItem('evr_tok');errNote(e);}render();}
+async function signout(){try{if(token)await api('logout');}catch(e){}token='';user=null;localStorage.removeItem('evr_tok');render();}
+async function load(){try{const r=await api('list');user=r.user;items=r.items;docs=r.docs;stickers=r.stickers;}catch(e){token='';user=null;localStorage.removeItem('evr_tok');errNote(e);}render();}
 
 // ---------- register / lists ----------
 let flt={q:'',cat:'',st:'',co:''};
