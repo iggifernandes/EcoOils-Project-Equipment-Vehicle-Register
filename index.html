@@ -62,7 +62,7 @@ dialog::backdrop{background:#0006}
 .chk{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px}
 .chk label{display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--ink);margin:0}
 .chk input{width:auto}
-.upr td{background:#fffbe6;white-space:normal}
+.upbar{display:flex;gap:8px;align-items:flex-end;flex-wrap:nowrap;background:#fffbe6;border:1px solid var(--line);padding:10px;margin-bottom:8px}.upbar>div{flex:1 1 0;min-width:0}.upbar>div.w2{flex:2 1 0}.upbar input[type=file]{font-size:.75rem;padding:5px}.upbar input:disabled{background:#f0f0f0}.upbar button{flex:none}@media(max-width:760px){.upbar{flex-wrap:wrap}.upbar>div,.upbar>div.w2{flex:1 1 45%}}
 .banner{padding:28px 18px;text-align:center;color:#fff;margin-bottom:14px}
 .banner b{display:block;font-size:clamp(1.6rem,6vw,2.6rem);font-weight:500;letter-spacing:.12em}
 .vbox{max-width:640px;margin:0 auto}
@@ -86,7 +86,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.2.2';
+const VERSION='1.2.3';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -104,7 +104,7 @@ en:{title:'Equipment & Vehicle Register',subtitle:'Sei Mangkei',email:'Email',pi
 register:'Register',add:'New entry',approvals:'To verify',alerts:'Expiry alerts',contacts:'Contacts',total:'Total',fit:'Fit for use',pending:'To verify',expiring:'Expiring 30d',expired:'Suspended / expired',search:'Search...',all:'All',category:'Category',vehicle:'Vehicle',heavy:'Heavy Equipment',type:'Type',make:'Make / model',plate:'Plate / serial no.',company:'Company',status:'Status',location:'Location',sticker:'Sticker',operator:'Operator / driver',simcls:'SIM class',siocls:'SIO class / type',remarks:'Remarks',id:'ID',identity:'Equipment',operatorsec:'Operator',docs:'Documents',save:'Save',cancel:'Close',nextinsp:'Next inspection due',
 FIT:'FIT',SUSPENDED:'SUSPENDED',VOID:'VOID','NOT APPROVED':'NOT APPROVED',Draft:'Draft',Submitted:'With HSSE',Approved:'Approved',Rejected:'Returned',
 missing:'Missing',unverified:'To verify',ok:'Verified',rejected:'Rejected',expired:'Expired',
-upload:'Upload / renew',view:'View',verifyyes:'Verify',verifyno:'Reject',number:'Document no.',expiry:'Expiry date',note:'Note',file:'File (PDF, JPG, PNG)',doUpload:'Upload',docnote:'Renewals stay pending until HSSE verifies them; the current verified document stays valid until then.',
+upload:'Upload / renew',docname:'Document',validity:'Valid until',view:'View',verifyyes:'Verify',verifyno:'Reject',number:'Document no.',expiry:'Expiry date',note:'Note',file:'File (PDF, JPG, PNG)',doUpload:'Upload',docnote:'Renewals stay pending until HSSE verifies them; the current verified document stays valid until then.',
 submit:'Submit to HSSE for inspection',submitted:'Submitted.',saved:'Saved.',uploaded:'Uploaded.',none:'Nothing to show.',export:'Export CSV',print:'Print',days:'days',
 insp:'Physical inspection (HSSE)',inspnotes:'Inspection notes',approve:'Approve & issue sticker',reinsp:'Pass re-inspection',reject:'Return to contractor',rejreason:'Reason for returning:',
 stk:'Inspection sticker',preview:'Preview sticker',printstk:'Print sticker (once)',printconfirm:'The sticker can be printed ONLY ONCE. Continue?',printed:'Printed',notprinted:'Not printed yet',reprint:'Authorise reprint',reprintreason:'Reason for reprint (lost, damaged, misprint):',voidit:'Void inspection (damage found)',voidreason:'Describe the damage or defect found:',
@@ -117,7 +117,7 @@ id:{title:'Register Peralatan & Kendaraan',subtitle:'Sei Mangkei',email:'Email',
 register:'Register',add:'Entri baru',approvals:'Perlu verifikasi',alerts:'Peringatan kedaluwarsa',contacts:'Kontak',total:'Total',fit:'Layak pakai',pending:'Perlu verifikasi',expiring:'Habis 30 hari',expired:'Ditangguhkan / kedaluwarsa',search:'Cari...',all:'Semua',category:'Kategori',vehicle:'Kendaraan',heavy:'Alat Berat',type:'Jenis',make:'Merek / model',plate:'No. polisi / seri',company:'Perusahaan',status:'Status',location:'Lokasi',sticker:'Stiker',operator:'Operator / pengemudi',simcls:'Golongan SIM',siocls:'Kelas / jenis SIO',remarks:'Catatan',id:'ID',identity:'Peralatan',operatorsec:'Operator',docs:'Dokumen',save:'Simpan',cancel:'Tutup',nextinsp:'Inspeksi berikutnya',
 FIT:'LAYAK',SUSPENDED:'DITANGGUHKAN',VOID:'BATAL','NOT APPROVED':'BELUM DISETUJUI',Draft:'Draf',Submitted:'Di HSSE',Approved:'Disetujui',Rejected:'Dikembalikan',
 missing:'Belum ada',unverified:'Perlu verifikasi',ok:'Terverifikasi',rejected:'Ditolak',expired:'Kedaluwarsa',
-upload:'Unggah / perbarui',view:'Lihat',verifyyes:'Verifikasi',verifyno:'Tolak',number:'No. dokumen',expiry:'Tanggal kedaluwarsa',note:'Catatan',file:'Berkas (PDF, JPG, PNG)',doUpload:'Unggah',docnote:'Pembaruan menunggu verifikasi HSSE; dokumen terverifikasi saat ini tetap berlaku sampai saat itu.',
+upload:'Unggah / perbarui',docname:'Dokumen',validity:'Berlaku s/d',view:'Lihat',verifyyes:'Verifikasi',verifyno:'Tolak',number:'No. dokumen',expiry:'Tanggal kedaluwarsa',note:'Catatan',file:'Berkas (PDF, JPG, PNG)',doUpload:'Unggah',docnote:'Pembaruan menunggu verifikasi HSSE; dokumen terverifikasi saat ini tetap berlaku sampai saat itu.',
 submit:'Ajukan ke HSSE untuk inspeksi',submitted:'Diajukan.',saved:'Tersimpan.',uploaded:'Terunggah.',none:'Tidak ada data.',export:'Ekspor CSV',print:'Cetak',days:'hari',
 insp:'Inspeksi fisik (HSSE)',inspnotes:'Catatan inspeksi',approve:'Setujui & terbitkan stiker',reinsp:'Lulus inspeksi ulang',reject:'Kembalikan ke kontraktor',rejreason:'Alasan pengembalian:',
 stk:'Stiker inspeksi',preview:'Pratinjau stiker',printstk:'Cetak stiker (sekali)',printconfirm:'Stiker HANYA dapat dicetak SATU KALI. Lanjutkan?',printed:'Sudah dicetak',notprinted:'Belum dicetak',reprint:'Izinkan cetak ulang',reprintreason:'Alasan cetak ulang (hilang, rusak, salah cetak):',voidit:'Batalkan inspeksi (ada kerusakan)',voidreason:'Jelaskan kerusakan atau cacat yang ditemukan:',
@@ -130,7 +130,7 @@ ms:{title:'Daftar Peralatan & Kenderaan',subtitle:'Sei Mangkei',email:'E-mel',pi
 register:'Daftar',add:'Entri baharu',approvals:'Perlu pengesahan',alerts:'Amaran tamat tempoh',contacts:'Kenalan',total:'Jumlah',fit:'Layak guna',pending:'Perlu pengesahan',expiring:'Tamat 30 hari',expired:'Digantung / tamat',search:'Cari...',all:'Semua',category:'Kategori',vehicle:'Kenderaan',heavy:'Peralatan Berat',type:'Jenis',make:'Buatan / model',plate:'No. pendaftaran / siri',company:'Syarikat',status:'Status',location:'Lokasi',sticker:'Pelekat',operator:'Pengendali / pemandu',simcls:'Kelas SIM',siocls:'Kelas / jenis SIO',remarks:'Catatan',id:'ID',identity:'Peralatan',operatorsec:'Pengendali',docs:'Dokumen',save:'Simpan',cancel:'Tutup',nextinsp:'Pemeriksaan seterusnya',
 FIT:'LAYAK',SUSPENDED:'DIGANTUNG',VOID:'BATAL','NOT APPROVED':'BELUM DILULUSKAN',Draft:'Draf',Submitted:'Di HSSE',Approved:'Diluluskan',Rejected:'Dikembalikan',
 missing:'Tiada',unverified:'Perlu pengesahan',ok:'Disahkan',rejected:'Ditolak',expired:'Tamat tempoh',
-upload:'Muat naik / perbaharui',view:'Lihat',verifyyes:'Sahkan',verifyno:'Tolak',number:'No. dokumen',expiry:'Tarikh tamat',note:'Catatan',file:'Fail (PDF, JPG, PNG)',doUpload:'Muat naik',docnote:'Pembaharuan menunggu pengesahan HSSE; dokumen sah semasa kekal sah sehingga itu.',
+upload:'Muat naik / perbaharui',docname:'Dokumen',validity:'Sah sehingga',view:'Lihat',verifyyes:'Sahkan',verifyno:'Tolak',number:'No. dokumen',expiry:'Tarikh tamat',note:'Catatan',file:'Fail (PDF, JPG, PNG)',doUpload:'Muat naik',docnote:'Pembaharuan menunggu pengesahan HSSE; dokumen sah semasa kekal sah sehingga itu.',
 submit:'Hantar ke HSSE untuk pemeriksaan',submitted:'Dihantar.',saved:'Disimpan.',uploaded:'Dimuat naik.',none:'Tiada data.',export:'Eksport CSV',print:'Cetak',days:'hari',
 insp:'Pemeriksaan fizikal (HSSE)',inspnotes:'Catatan pemeriksaan',approve:'Lulus & keluarkan pelekat',reinsp:'Lulus pemeriksaan semula',reject:'Pulangkan kepada kontraktor',rejreason:'Sebab dipulangkan:',
 stk:'Pelekat pemeriksaan',preview:'Pratonton pelekat',printstk:'Cetak pelekat (sekali)',printconfirm:'Pelekat HANYA boleh dicetak SEKALI. Teruskan?',printed:'Sudah dicetak',notprinted:'Belum dicetak',reprint:'Benarkan cetak semula',reprintreason:'Sebab cetak semula (hilang, rosak, salah cetak):',voidit:'Batalkan pemeriksaan (ada kerosakan)',voidreason:'Terangkan kerosakan atau kecacatan yang ditemui:',
@@ -253,14 +253,13 @@ function drawItem(m,e){const i=items.find(x=>x.ID===cur);if(!i)return;$('#dt').t
   $('#db').innerHTML=(m?msg(m,e):'')+`<div class="row" style="margin-top:0">${spill(i)}${i.Status==='Approved'?`<span class="hint">${t('nextinsp')}: ${esc(i.NextInspection)}</span>`:''}</div>
   ${i.FitWhy&&i.FitWhy.length&&i.Fit!=='FIT'?`<div class="msg err">${i.FitWhy.map(esc).join('<br>')}</div>`:''}${i.DecisionNote&&['Rejected','Void'].includes(i.Status)?`<div class="msg err">${esc(i.DecisionNote)}</div>`:''}
   <h3>${t('identity')}</h3><div data-root id="df">${identHtml(i)}</div>${editable?`<div class="row"><button class="btn sec" onclick="saveItem()">${t('save')}</button></div>`:''}
-  <h3>${t('docs')}</h3><div class="hint" style="margin-bottom:6px">${t('docnote')}</div><div class="tw"><table><thead><tr><th>${t('docs')}</th><th>${t('status')}</th><th>${t('number')}</th><th>${t('expiry')}</th><th></th></tr></thead><tbody>${i.Rules.map(r=>docRow(i,r)).join('')}</tbody></table></div>
+  <h3>${t('docs')}</h3>${uploadBar(i)}<div class="hint" style="margin-bottom:6px">${t('docnote')}</div><div class="tw"><table><thead><tr><th>${t('docs')}</th><th>${t('status')}</th><th>${t('number')}</th><th>${t('expiry')}</th><th></th></tr></thead><tbody>${i.Rules.map(r=>docRow(i,r)).join('')}</tbody></table></div>
   ${canWork()&&['Draft','Rejected','Void'].includes(i.Status)?`<div class="row"><button class="btn" onclick="submitItem()">${t('submit')}</button></div>`:''}
   ${isHSSE()&&['Submitted','Approved'].includes(i.Status)?inspHtml(i):''}${isHSSE()&&i.Status==='Approved'?stickerHtmlPanel(i):''}`;
-  if(!editable)$('#df').querySelectorAll('input,select,textarea').forEach(x=>x.disabled=true);}
+  if(!editable)$('#df').querySelectorAll('#df input,#df select,#df textarea').forEach(x=>x.disabled=true);if($('#upk'))syncUp();}
 function docRow(i,r){const d=docs.find(x=>x.DocID===(r.pendingId||r.docId));const n=docs.filter(x=>x.ItemID===i.ID&&x.DocType===r.k).length;
   const canV=isHSSE()&&d&&d.Verified==='';
-  let h=`<tr><td>${t('d_'+r.k)}${r.k==='photo'&&n>1?` (${n})`:''}</td><td>${rpill(r.pendingId?'unverified':r.s)}${r.pendingId?` <span class="hint">+ ${t('ok')}</span>`:''}</td><td>${esc(d&&d.Number)}</td><td>${d&&d.Expiry?dpill(d.Expiry):'-'}</td><td>${d&&canWork()?`<button class="btn sec sm" onclick="viewDoc('${d.DocID}')">${t('view')}</button> `:''}${canV?`<button class="btn sm" onclick="vdoc('${d.DocID}','Yes')">${t('verifyyes')}</button> <button class="btn red sm" onclick="vdoc('${d.DocID}','No')">${t('verifyno')}</button> `:''}${canWork()?`<button class="btn sec sm" onclick="upk='${r.k}';drawItem()">${t('upload')}</button>`:''}</td></tr>`;
-  if(upk===r.k)h+=`<tr class="upr"><td colspan="5"><div class="grid" id="upf">${r.num?`<div><label>${t('number')}</label><input data-f="number"></div>`:''}${r.exp?`<div><label>${t('expiry')}${r.exp===2?' *':''}</label><input data-f="expiry" type="date"></div>`:''}<div><label>${t('note')}</label><input data-f="note"></div><div><label>${t('file')}</label><input id="upfile" type="file" accept=".pdf,image/jpeg,image/png"${r.k==='photo'?' capture="environment"':''}></div></div><div class="row"><button class="btn" onclick="doUpload('${r.k}')">${t('doUpload')}</button><button class="btn sec" onclick="upk='';drawItem()">${t('cancel')}</button></div></td></tr>`;
+  let h=`<tr><td>${t('d_'+r.k)}${r.k==='photo'&&n>1?` (${n})`:''}</td><td>${rpill(r.pendingId?'unverified':r.s)}${r.pendingId?` <span class="hint">+ ${t('ok')}</span>`:''}</td><td>${esc(d&&d.Number)}</td><td>${d&&d.Expiry?dpill(d.Expiry):'-'}</td><td>${d&&canWork()?`<button class="btn sec sm" onclick="viewDoc('${d.DocID}')">${t('view')}</button> `:''}${canV?`<button class="btn sm" onclick="vdoc('${d.DocID}','Yes')">${t('verifyyes')}</button> <button class="btn red sm" onclick="vdoc('${d.DocID}','No')">${t('verifyno')}</button> `:''}${canWork()?`<button class="btn sec sm" onclick="pickDoc('${r.k}')">${t('upload')}</button>`:''}</td></tr>`;
   return h;}
 function inspHtml(i){const re=i.Status==='Approved';
   return `<h3>${t('insp')}</h3><div class="chk" id="chkf">${i.Check.map(k=>`<label><input type="checkbox" data-c="${k}"> ${t('c_'+k)}</label>`).join('')}</div>
@@ -281,8 +280,16 @@ async function readFile(f){
   const img=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(f);});
   const sc=Math.min(1,1800/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
   return{mime:'image/jpeg',b64:c.toDataURL('image/jpeg',.8).split(',')[1]};}
-async function doUpload(k){try{const f=$('#upfile').files[0];if(!f)throw new Error(t('file'));const o=collect($('#upf')),fl=await readFile(f);
-  await api('uploadDoc',{itemId:cur,docType:k,number:o.number||'',expiry:o.expiry||'',note:o.note||'',fileName:f.name,mime:fl.mime,b64:fl.b64});upk='';await refresh(t('uploaded'));}catch(e){drawItem(e.message,1);}}
+function uploadBar(i){if(!canWork())return '';
+  return `<div class="upbar" id="upf"><div class="w2"><label>${t('docname')}</label><select id="upk" onchange="syncUp()">${i.Rules.map(r=>`<option value="${r.k}">${esc(t('d_'+r.k))}${r.s==='ok'?'':' *'}</option>`).join('')}</select></div>
+  <div><label>${t('number')}</label><input id="upnum"></div><div><label id="uplbl">${t('validity')}</label><input id="upexp" type="date"></div>
+  <div class="w2"><label>${t('file')}</label><input id="upfile" type="file" accept=".pdf,image/jpeg,image/png"></div><button class="btn" onclick="doUpload()">${t('doUpload')}</button></div>`;}
+function syncUp(){const i=items.find(x=>x.ID===cur),k=$('#upk').value,r=i.Rules.find(x=>x.k===k);if(!r)return;
+  const num=$('#upnum'),ex=$('#upexp');num.disabled=!r.num;if(!r.num)num.value='';ex.disabled=!r.exp;if(!r.exp)ex.value='';
+  ex.min=new Date().toISOString().slice(0,10);$('#uplbl').textContent=t('validity')+(r.exp===2?' (opt.)':'');}
+function pickDoc(k){const s=$('#upk');if(!s)return;s.value=k;syncUp();s.scrollIntoView({block:'center'});$('#upfile').focus();}
+async function doUpload(){try{const k=$('#upk').value,f=$('#upfile').files[0];if(!f)throw new Error(t('file'));const fl=await readFile(f);
+  await api('uploadDoc',{itemId:cur,docType:k,number:$('#upnum').value.trim(),expiry:$('#upexp').value,note:'',fileName:f.name,mime:fl.mime,b64:fl.b64});await refresh(t('uploaded'));}catch(e){drawItem(e.message,1);}}
 async function viewDoc(id){const w=window.open('','_blank');try{const r=await api('getFile',{docId:id});const bin=atob(r.b64),u=new Uint8Array(bin.length);for(let n=0;n<bin.length;n++)u[n]=bin.charCodeAt(n);w.location=URL.createObjectURL(new Blob([u],{type:r.mime}));}catch(e){if(w)w.close();drawItem(e.message,1);}}
 async function vdoc(id,res){let note2='';if(res==='No'){note2=prompt(t('rejreason'))||'';if(!note2)return;}try{await api('verifyDoc',{docId:id,result:res,note:note2});await refresh();}catch(e){drawItem(e.message,1);}}
 function checklist(){const o={};document.querySelectorAll('[data-c]').forEach(x=>o[x.dataset.c]=x.checked);return o;}
