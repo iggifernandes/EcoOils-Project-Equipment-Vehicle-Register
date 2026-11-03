@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equipment & Vehicle Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{--y:#FBCE07;--r:#DD1D21;--ink:#404040;--grey:#8a8a8a;--line:#e3e3e3;--bg:#f7f7f7;--ok:#2e7d32;--warn:#e08a00}
+*{box-sizing:border-box}
+html{font-size:clamp(14px,1.1vw + 10px,18px)}
+body{margin:0;font-family:'Jost',system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+.wrap{width:min(100%,1600px);margin:0 auto;padding:0 clamp(10px,2vw,32px)}
+header{background:#fff;border-bottom:3px solid var(--y)}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:14px 0}
+.brand{display:flex;align-items:center;gap:14px}
+h1{margin:0;font-weight:300;text-transform:uppercase;letter-spacing:.22em;color:var(--grey);font-size:clamp(1rem,2.2vw,1.5rem)}
+.sub{font-size:.75rem;color:var(--grey);letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+.tr{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.ver{font-size:.7rem;color:var(--grey);letter-spacing:.1em}
+.lang button{border:1px solid var(--line);background:#fff;padding:3px 9px;font:inherit;font-size:.75rem;cursor:pointer;color:var(--ink)}
+.lang button.on{background:var(--y);border-color:var(--y);font-weight:500}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{border:0;background:none;font:inherit;text-transform:uppercase;letter-spacing:.12em;font-size:.8rem;padding:10px 14px;cursor:pointer;color:var(--grey);border-bottom:3px solid transparent;margin-bottom:-3px}
+nav button.on{color:var(--ink);border-bottom-color:var(--r)}
+main{padding:18px 0 60px}
+.card{background:#fff;border:1px solid var(--line);padding:16px;margin-bottom:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid var(--line);border-left:4px solid var(--y);padding:10px 14px}
+.kpi b{display:block;font-size:1.6rem;font-weight:400}.kpi span{font-size:.72rem;color:var(--grey);text-transform:uppercase;letter-spacing:.08em}
+.kpi.r{border-left-color:var(--r)}.kpi.w{border-left-color:var(--warn)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);background:#fff;color:var(--ink);width:100%}
+.bar input,.bar select{width:auto;flex:1 1 150px}
+label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--grey);display:block;margin-bottom:3px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+h3{font-weight:400;text-transform:uppercase;letter-spacing:.15em;font-size:.85rem;color:var(--grey);margin:18px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+button.btn{background:var(--y);border:0;padding:9px 18px;font:inherit;text-transform:uppercase;letter-spacing:.1em;font-size:.8rem;font-weight:500;cursor:pointer;color:#222}
+button.btn.sec{background:#fff;border:1px solid var(--ink)}button.btn.red{background:var(--r);color:#fff}
+button.btn.sm{padding:4px 10px;font-size:.7rem}
+button.btn:disabled{opacity:.45;cursor:not-allowed}
+.tw{overflow-x:auto;background:#fff;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+th{text-align:left;font-weight:500;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--grey);padding:9px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+tr.click{cursor:pointer}tr.click:hover{background:#fffbe6}
+.pill{display:inline-block;padding:2px 9px;font-size:.72rem;letter-spacing:.05em;border-radius:20px;color:#fff;background:var(--grey)}
+.pill.ok{background:var(--ok)}.pill.warn{background:var(--warn)}.pill.bad{background:var(--r)}.pill.pend{background:#6b7b8c}
+.msg{padding:10px 14px;margin-bottom:12px;border-left:4px solid var(--y);background:#fffbe6;font-size:.9rem}
+.msg.err{border-color:var(--r);background:#fdecec}
+dialog{border:0;padding:0;width:min(98vw,980px);max-height:94vh;box-shadow:0 10px 40px #0004}
+dialog::backdrop{background:#0006}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:#fff;border-bottom:3px solid var(--y)}
+.db{padding:16px 18px;overflow:auto;max-height:80vh}
+.x{border:0;background:none;font-size:1.4rem;cursor:pointer}
+.login{max-width:420px;margin:8vh auto}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.hide{display:none!important}
+.chk{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px}
+.chk label{display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--ink);margin:0}
+.chk input{width:auto}
+.upr td{background:#fffbe6;white-space:normal}
+.banner{padding:28px 18px;text-align:center;color:#fff;margin-bottom:14px}
+.banner b{display:block;font-size:clamp(1.6rem,6vw,2.6rem);font-weight:500;letter-spacing:.12em}
+.vbox{max-width:640px;margin:0 auto}
+.hint{font-size:.78rem;color:var(--grey);text-transform:none;letter-spacing:0}
+@media print{header nav,.bar,.row,.lang{display:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="top">
+    <div class="brand"><span id="lockup"></span><div><h1 data-t="title"></h1><div class="sub" data-t="subtitle"></div></div></div>
+    <div class="tr">
+      <div class="ver" id="ver"></div>
+      <div class="lang"><button data-l="en">EN</button><button data-l="id">ID</button><button data-l="ms">MS</button></div>
+      <div class="ver" id="who"></div>
+    </div>
+  </div>
+  <nav id="nav" class="hide"></nav>
+</div></header>
+<main class="wrap" id="app"></main>
+<dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
+
+<script>
+const VERSION='1.2.0';
+// After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
+const API_URL='';
+// Optional: URL of the EcoOils logo image. Blank = text placeholder. "PROJECT" is stretched under it to the logo width.
+const LOGO_URL='';
+const ICS=['GSB','WEN','KKS','PBS'];
+const LOCS=['On-site','Off-site','Under repair','Removed'];
+const VTYPES=['Light vehicle','Pickup / light truck','Bus / minibus','Truck','Tanker truck','Motorcycle'];
+const HTYPES=['Mobile crane','Crawler crane','Tower crane','Forklift','Excavator','Bulldozer','Wheel loader','Dump truck','Aerial work platform','Hoist / chain block','Other'];
+const SIMCLS=['A','B1','B2','B1 Umum','B2 Umum','C'];
+const CROLES=['Logistics','HR','HSSE'];
+
+const T={
+en:{title:'Equipment & Vehicle Register',subtitle:'EcoOils Project | Sei Mangkei',email:'Email',pin:'PIN',signin:'Sign in',forgot:'Forgot PIN / set PIN',sendcode:'Send code',code:'Email code',newpin:'New PIN (4-8 digits)',savepin:'Save PIN',back:'Back',signout:'Sign out',codesent:'If the email is registered, a code was sent.',pinset:'PIN saved. Please sign in.',noapi:'Not connected: set API_URL in index.html (see setup steps).',
+register:'Register',add:'New entry',approvals:'To verify',alerts:'Expiry alerts',contacts:'Contacts',total:'Total',fit:'Fit for use',pending:'To verify',expiring:'Expiring 30d',expired:'Suspended / expired',search:'Search...',all:'All',category:'Category',vehicle:'Vehicle',heavy:'Heavy Equipment',type:'Type',make:'Make / model',plate:'Plate / serial no.',company:'Company',status:'Status',location:'Location',sticker:'Sticker',operator:'Operator / driver',simcls:'SIM class',siocls:'SIO class / type',remarks:'Remarks',id:'ID',identity:'Equipment',operatorsec:'Operator',docs:'Documents',save:'Save',cancel:'Close',nextinsp:'Next inspection due',
+FIT:'FIT',SUSPENDED:'SUSPENDED',VOID:'VOID','NOT APPROVED':'NOT APPROVED',Draft:'Draft',Submitted:'With HSSE',Approved:'Approved',Rejected:'Returned',
+missing:'Missing',unverified:'To verify',ok:'Verified',rejected:'Rejected',expired:'Expired',
+upload:'Upload / renew',view:'View',verifyyes:'Verify',verifyno:'Reject',number:'Document no.',expiry:'Expiry date',note:'Note',file:'File (PDF, JPG, PNG)',doUpload:'Upload',docnote:'Renewals stay pending until HSSE verifies them; the current verified document stays valid until then.',
+submit:'Submit to HSSE for inspection',submitted:'Submitted.',saved:'Saved.',uploaded:'Uploaded.',none:'Nothing to show.',export:'Export CSV',print:'Print',days:'days',
+insp:'Physical inspection (HSSE)',inspnotes:'Inspection notes',approve:'Approve & issue sticker',reinsp:'Pass re-inspection',reject:'Return to contractor',rejreason:'Reason for returning:',
+stk:'Inspection sticker',preview:'Preview sticker',printstk:'Print sticker (once)',printconfirm:'The sticker can be printed ONLY ONCE. Continue?',printed:'Printed',notprinted:'Not printed yet',reprint:'Authorise reprint',reprintreason:'Reason for reprint (lost, damaged, misprint):',voidit:'Void inspection (damage found)',voidreason:'Describe the damage or defect found:',
+toobig:'File must be under 3.5 MB',badtype:'Use PDF, JPG or PNG',
+cs:'Reminder contacts',csnote:'Logistics, HR and HSSE contacts of each company receive expiry reminders for approvals and vehicle documents, together with the EcoOils HSSE contacts.',name:'Name',role:'Role',add2:'Add contact',remove:'Remove',sendnow:'Send reminders now',sentn:'Reminder emails sent:',
+verifytitle:'Vehicle / equipment verification',vfit:'FIT FOR SITE USE',vsusp:'SUSPENDED',vvoid:'VOID: RE-INSPECTION REQUIRED',vna:'NOT APPROVED',issued:'Sticker issued',stickerno:'Sticker no.',reason:'Reason',invalidqr:'Invalid QR code',
+d_stnk:'STNK',d_pkb:'PKB tax / SWDKLLJ proof',d_own:'Ownership (BPKB copy) or rental agreement',d_ins:'Insurance',d_sim:'Driver SIM',d_mcu:'Medical fit (MCU)',d_ddc:'Defensive driving certificate',d_photo:'Photos (4 sides + plate / unit)',d_chk:'Pre-mobilisation checklist (signed)',d_kir:'KIR periodic test',d_b3:'B3 permit / TREM card / SDS',d_silo:'SILO (Disnaker)',d_rep:'PJK3 inspection & load test report',d_sio:'Operator SIO',d_rig:'Rigger / signalman certificate',d_man:'Manual / load chart / data plate',d_mnt:'Maintenance record',
+c_lights:'Lights and indicators work',c_brakes:'Brakes and handbrake',c_tyres:'Tyres and spare',c_horn:'Horn',c_rev:'Reverse alarm / camera',c_belts:'Seat belts (all seats)',c_mirrors:'Mirrors, windscreen, wipers',c_leaks:'No fluid leaks',c_fire:'Fire extinguisher (valid tag)',c_aid:'First aid kit',c_chock:'Wheel chocks / warning triangle',c_body:'No body damage / defects',c_ivms:'IVMS / speed limiter fitted',c_interior:'Cabin clean, no loose items',c_cargo:'Cargo restraints / body secure',c_hyd:'Hydraulic system, no leaks',c_steer:'Brakes and steering',c_safety:'Safety devices (limit switch, overload alarm)',c_alarms:'Alarms, horn, beacon, lights',c_rops:'Seat belt, ROPS / FOPS',c_guards:'Guards and covers fitted',c_under:'Tracks / tyres / outriggers',c_plate:'Data plate and load chart visible',c_spark:'Spark arrestor (hazardous area)',c_rope:'Boom, wire rope, hook condition'},
+id:{title:'Register Peralatan & Kendaraan',subtitle:'EcoOils Project | Sei Mangkei',email:'Email',pin:'PIN',signin:'Masuk',forgot:'Lupa PIN / atur PIN',sendcode:'Kirim kode',code:'Kode email',newpin:'PIN baru (4-8 digit)',savepin:'Simpan PIN',back:'Kembali',signout:'Keluar',codesent:'Jika email terdaftar, kode telah dikirim.',pinset:'PIN tersimpan. Silakan masuk.',noapi:'Belum terhubung: isi API_URL di index.html.',
+register:'Register',add:'Entri baru',approvals:'Perlu verifikasi',alerts:'Peringatan kedaluwarsa',contacts:'Kontak',total:'Total',fit:'Layak pakai',pending:'Perlu verifikasi',expiring:'Habis 30 hari',expired:'Ditangguhkan / kedaluwarsa',search:'Cari...',all:'Semua',category:'Kategori',vehicle:'Kendaraan',heavy:'Alat Berat',type:'Jenis',make:'Merek / model',plate:'No. polisi / seri',company:'Perusahaan',status:'Status',location:'Lokasi',sticker:'Stiker',operator:'Operator / pengemudi',simcls:'Golongan SIM',siocls:'Kelas / jenis SIO',remarks:'Catatan',id:'ID',identity:'Peralatan',operatorsec:'Operator',docs:'Dokumen',save:'Simpan',cancel:'Tutup',nextinsp:'Inspeksi berikutnya',
+FIT:'LAYAK',SUSPENDED:'DITANGGUHKAN',VOID:'BATAL','NOT APPROVED':'BELUM DISETUJUI',Draft:'Draf',Submitted:'Di HSSE',Approved:'Disetujui',Rejected:'Dikembalikan',
+missing:'Belum ada',unverified:'Perlu verifikasi',ok:'Terverifikasi',rejected:'Ditolak',expired:'Kedaluwarsa',
+upload:'Unggah / perbarui',view:'Lihat',verifyyes:'Verifikasi',verifyno:'Tolak',number:'No. dokumen',expiry:'Tanggal kedaluwarsa',note:'Catatan',file:'Berkas (PDF, JPG, PNG)',doUpload:'Unggah',docnote:'Pembaruan menunggu verifikasi HSSE; dokumen terverifikasi saat ini tetap berlaku sampai saat itu.',
+submit:'Ajukan ke HSSE untuk inspeksi',submitted:'Diajukan.',saved:'Tersimpan.',uploaded:'Terunggah.',none:'Tidak ada data.',export:'Ekspor CSV',print:'Cetak',days:'hari',
+insp:'Inspeksi fisik (HSSE)',inspnotes:'Catatan inspeksi',approve:'Setujui & terbitkan stiker',reinsp:'Lulus inspeksi ulang',reject:'Kembalikan ke kontraktor',rejreason:'Alasan pengembalian:',
+stk:'Stiker inspeksi',preview:'Pratinjau stiker',printstk:'Cetak stiker (sekali)',printconfirm:'Stiker HANYA dapat dicetak SATU KALI. Lanjutkan?',printed:'Sudah dicetak',notprinted:'Belum dicetak',reprint:'Izinkan cetak ulang',reprintreason:'Alasan cetak ulang (hilang, rusak, salah cetak):',voidit:'Batalkan inspeksi (ada kerusakan)',voidreason:'Jelaskan kerusakan atau cacat yang ditemukan:',
+toobig:'Berkas harus di bawah 3,5 MB',badtype:'Gunakan PDF, JPG atau PNG',
+cs:'Kontak pengingat',csnote:'Kontak Logistik, HR dan HSSE tiap perusahaan menerima pengingat kedaluwarsa persetujuan dan dokumen kendaraan, bersama kontak HSSE EcoOils.',name:'Nama',role:'Peran',add2:'Tambah kontak',remove:'Hapus',sendnow:'Kirim pengingat sekarang',sentn:'Email pengingat terkirim:',
+verifytitle:'Verifikasi kendaraan / peralatan',vfit:'LAYAK DIGUNAKAN DI LOKASI',vsusp:'DITANGGUHKAN',vvoid:'BATAL: WAJIB INSPEKSI ULANG',vna:'BELUM DISETUJUI',issued:'Stiker terbit',stickerno:'No. stiker',reason:'Alasan',invalidqr:'Kode QR tidak valid',
+d_stnk:'STNK',d_pkb:'Pajak PKB / bukti SWDKLLJ',d_own:'Kepemilikan (salinan BPKB) atau perjanjian sewa',d_ins:'Asuransi',d_sim:'SIM pengemudi',d_mcu:'Surat sehat (MCU)',d_ddc:'Sertifikat defensive driving',d_photo:'Foto (4 sisi + plat / unit)',d_chk:'Checklist pra-mobilisasi (bertanda tangan)',d_kir:'Uji berkala KIR',d_b3:'Izin B3 / kartu TREM / SDS',d_silo:'SILO (Disnaker)',d_rep:'Laporan pemeriksaan & uji beban PJK3',d_sio:'SIO operator',d_rig:'Sertifikat rigger / signalman',d_man:'Manual / load chart / data plate',d_mnt:'Catatan perawatan',
+c_lights:'Lampu dan sein berfungsi',c_brakes:'Rem dan rem tangan',c_tyres:'Ban dan ban cadangan',c_horn:'Klakson',c_rev:'Alarm / kamera mundur',c_belts:'Sabuk pengaman (semua kursi)',c_mirrors:'Spion, kaca depan, wiper',c_leaks:'Tidak ada kebocoran cairan',c_fire:'APAR (tag berlaku)',c_aid:'Kotak P3K',c_chock:'Ganjal roda / segitiga pengaman',c_body:'Tidak ada kerusakan / cacat',c_ivms:'IVMS / pembatas kecepatan terpasang',c_interior:'Kabin bersih, tidak ada barang lepas',c_cargo:'Pengikat muatan / bak aman',c_hyd:'Sistem hidrolik, tidak bocor',c_steer:'Rem dan kemudi',c_safety:'Alat pengaman (limit switch, alarm beban lebih)',c_alarms:'Alarm, klakson, beacon, lampu',c_rops:'Sabuk pengaman, ROPS / FOPS',c_guards:'Pelindung dan penutup terpasang',c_under:'Track / ban / outrigger',c_plate:'Data plate dan load chart terlihat',c_spark:'Spark arrestor (area berbahaya)',c_rope:'Kondisi boom, tali baja, hook'},
+ms:{title:'Daftar Peralatan & Kenderaan',subtitle:'EcoOils Project | Sei Mangkei',email:'E-mel',pin:'PIN',signin:'Log masuk',forgot:'Lupa PIN / tetapkan PIN',sendcode:'Hantar kod',code:'Kod e-mel',newpin:'PIN baharu (4-8 digit)',savepin:'Simpan PIN',back:'Kembali',signout:'Log keluar',codesent:'Jika e-mel berdaftar, kod telah dihantar.',pinset:'PIN disimpan. Sila log masuk.',noapi:'Belum disambung: tetapkan API_URL dalam index.html.',
+register:'Daftar',add:'Entri baharu',approvals:'Perlu pengesahan',alerts:'Amaran tamat tempoh',contacts:'Kenalan',total:'Jumlah',fit:'Layak guna',pending:'Perlu pengesahan',expiring:'Tamat 30 hari',expired:'Digantung / tamat',search:'Cari...',all:'Semua',category:'Kategori',vehicle:'Kenderaan',heavy:'Peralatan Berat',type:'Jenis',make:'Buatan / model',plate:'No. pendaftaran / siri',company:'Syarikat',status:'Status',location:'Lokasi',sticker:'Pelekat',operator:'Pengendali / pemandu',simcls:'Kelas SIM',siocls:'Kelas / jenis SIO',remarks:'Catatan',id:'ID',identity:'Peralatan',operatorsec:'Pengendali',docs:'Dokumen',save:'Simpan',cancel:'Tutup',nextinsp:'Pemeriksaan seterusnya',
+FIT:'LAYAK',SUSPENDED:'DIGANTUNG',VOID:'BATAL','NOT APPROVED':'BELUM DILULUSKAN',Draft:'Draf',Submitted:'Di HSSE',Approved:'Diluluskan',Rejected:'Dikembalikan',
+missing:'Tiada',unverified:'Perlu pengesahan',ok:'Disahkan',rejected:'Ditolak',expired:'Tamat tempoh',
+upload:'Muat naik / perbaharui',view:'Lihat',verifyyes:'Sahkan',verifyno:'Tolak',number:'No. dokumen',expiry:'Tarikh tamat',note:'Catatan',file:'Fail (PDF, JPG, PNG)',doUpload:'Muat naik',docnote:'Pembaharuan menunggu pengesahan HSSE; dokumen sah semasa kekal sah sehingga itu.',
+submit:'Hantar ke HSSE untuk pemeriksaan',submitted:'Dihantar.',saved:'Disimpan.',uploaded:'Dimuat naik.',none:'Tiada data.',export:'Eksport CSV',print:'Cetak',days:'hari',
+insp:'Pemeriksaan fizikal (HSSE)',inspnotes:'Catatan pemeriksaan',approve:'Lulus & keluarkan pelekat',reinsp:'Lulus pemeriksaan semula',reject:'Pulangkan kepada kontraktor',rejreason:'Sebab dipulangkan:',
+stk:'Pelekat pemeriksaan',preview:'Pratonton pelekat',printstk:'Cetak pelekat (sekali)',printconfirm:'Pelekat HANYA boleh dicetak SEKALI. Teruskan?',printed:'Sudah dicetak',notprinted:'Belum dicetak',reprint:'Benarkan cetak semula',reprintreason:'Sebab cetak semula (hilang, rosak, salah cetak):',voidit:'Batalkan pemeriksaan (ada kerosakan)',voidreason:'Terangkan kerosakan atau kecacatan yang ditemui:',
+toobig:'Fail mesti di bawah 3.5 MB',badtype:'Gunakan PDF, JPG atau PNG',
+cs:'Kenalan peringatan',csnote:'Kenalan Logistik, HR dan HSSE setiap syarikat menerima peringatan tamat tempoh kelulusan dan dokumen kenderaan, bersama kenalan HSSE EcoOils.',name:'Nama',role:'Peranan',add2:'Tambah kenalan',remove:'Buang',sendnow:'Hantar peringatan sekarang',sentn:'E-mel peringatan dihantar:',
+verifytitle:'Pengesahan kenderaan / peralatan',vfit:'LAYAK DIGUNAKAN DI TAPAK',vsusp:'DIGANTUNG',vvoid:'BATAL: PERLU PEMERIKSAAN SEMULA',vna:'BELUM DILULUSKAN',issued:'Pelekat dikeluarkan',stickerno:'No. pelekat',reason:'Sebab',invalidqr:'Kod QR tidak sah',
+d_stnk:'STNK',d_pkb:'Cukai PKB / bukti SWDKLLJ',d_own:'Pemilikan (salinan BPKB) atau perjanjian sewa',d_ins:'Insurans',d_sim:'SIM pemandu',d_mcu:'Sijil sihat (MCU)',d_ddc:'Sijil defensive driving',d_photo:'Gambar (4 sisi + plat / unit)',d_chk:'Senarai semak pra-mobilisasi (bertandatangan)',d_kir:'Ujian berkala KIR',d_b3:'Permit B3 / kad TREM / SDS',d_silo:'SILO (Disnaker)',d_rep:'Laporan pemeriksaan & ujian beban PJK3',d_sio:'SIO pengendali',d_rig:'Sijil rigger / signalman',d_man:'Manual / load chart / data plate',d_mnt:'Rekod penyelenggaraan',
+c_lights:'Lampu dan isyarat berfungsi',c_brakes:'Brek dan brek tangan',c_tyres:'Tayar dan tayar ganti',c_horn:'Hon',c_rev:'Penggera / kamera undur',c_belts:'Tali pinggang keselamatan (semua kerusi)',c_mirrors:'Cermin, cermin depan, pengelap',c_leaks:'Tiada kebocoran cecair',c_fire:'Pemadam api (tag sah)',c_aid:'Kit pertolongan cemas',c_chock:'Penahan roda / segi tiga amaran',c_body:'Tiada kerosakan / kecacatan',c_ivms:'IVMS / pengehad kelajuan dipasang',c_interior:'Kabin bersih, tiada barang longgar',c_cargo:'Pengikat muatan / badan selamat',c_hyd:'Sistem hidraulik, tiada bocor',c_steer:'Brek dan stereng',c_safety:'Alat keselamatan (limit switch, penggera beban lebih)',c_alarms:'Penggera, hon, beacon, lampu',c_rops:'Tali pinggang, ROPS / FOPS',c_guards:'Pengadang dan penutup dipasang',c_under:'Track / tayar / outrigger',c_plate:'Data plate dan load chart kelihatan',c_spark:'Spark arrestor (kawasan berbahaya)',c_rope:'Keadaan boom, tali dawai, cangkuk'}
+};
+let lang=localStorage.getItem('evr_lang')||'en',tab='register',items=[],docs=[],stickers=[],contacts=[],user=null,token=sessionStorage.getItem('evr_tok')||'',authMode='login',note='',cur='',upk='';
+const $=s=>document.querySelector(s),t=k=>(T[lang][k]||T.en[k]||k);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dlg=$('#dlg'),isHSSE=()=>user&&user.role==='HSSE',canWork=()=>user&&(user.role==='HSSE'||user.role==='IC');
+const P=new URLSearchParams(location.search),VERIFY=P.get('v')?{id:P.get('v'),t:P.get('t')}:null;
+
+async function api(action,p={}){
+  if(!API_URL)throw new Error(t('noapi'));
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(Object.assign({action,token},p))});
+  const j=await r.json();if(!j.ok)throw new Error(j.error||'Error');return j;
+}
+function lockup(w,h){ // EcoOils logo (or placeholder) with PROJECT stretched below to the same width
+  const top=LOGO_URL?`<image href="${esc(LOGO_URL)}" x="0" y="0" width="${w}" height="${h*0.62}" preserveAspectRatio="xMidYMid meet"/>`:`<text x="0" y="${h*0.5}" font-size="${h*0.5}" font-weight="500" fill="#404040" textLength="${w}" lengthAdjust="spacingAndGlyphs">EcoOils</text>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${top}<text x="0" y="${h*0.95}" font-size="${h*0.3}" fill="#DD1D21" textLength="${w}" lengthAdjust="spacing">PROJECT</text></svg>`;}
+const msg=(m,e)=>m?`<div class="msg ${e?'err':''}">${esc(m)}</div>`:'';
+const errNote=e=>{note='!'+e.message;};
+
+// ---------- helpers ----------
+function daysLeft(s){if(!s)return null;return Math.round((new Date(s+'T00:00:00')-new Date(new Date().toDateString()))/864e5);}
+function dpill(s){const d=daysLeft(s);if(d===null)return '<span class="pill">-</span>';
+  if(d<0)return `<span class="pill bad">${esc(s)}</span>`;if(d<=30)return `<span class="pill warn">${d} ${t('days')}</span>`;return `<span class="pill ok">${esc(s)}</span>`;}
+function sl(i){return i.Fit==='NOT APPROVED'?i.Status:i.Fit;}
+function spill(i){const s=sl(i);const c=s==='FIT'?'ok':s==='SUSPENDED'?'warn':(s==='VOID'||s==='Rejected')?'bad':'pend';return `<span class="pill ${c}">${esc(t(s))}</span>`;}
+function rpill(s){const c=s==='ok'?'ok':(s==='missing'||s==='rejected'||s==='expired')?'bad':'warn';return `<span class="pill ${c}">${t(s)}</span>`;}
+const stickerOf=id=>stickers.find(s=>s.ItemID===id&&s.Status==='Active');
+const pendingDocs=i=>i.Rules.filter(r=>r.s==='unverified'||r.pendingId).length;
+
+// ---------- app shell ----------
+function applyLang(){document.documentElement.lang=lang;document.querySelectorAll('[data-t]').forEach(e=>e.textContent=t(e.dataset.t));
+  document.querySelectorAll('[data-l]').forEach(b=>b.classList.toggle('on',b.dataset.l===lang));
+  $('#ver').textContent='v'+VERSION;$('#who').textContent=user?`${user.name||user.email} (${user.role})`:'';$('#lockup').innerHTML=lockup(86,40);}
+document.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{lang=b.dataset.l;localStorage.setItem('evr_lang',lang);render();});
+function render(){applyLang();const nav=$('#nav');
+  if(VERIFY){nav.classList.add('hide');return renderVerify();}
+  if(!user){nav.classList.add('hide');return renderAuth();}
+  nav.classList.remove('hide');
+  const tabs=[['register','register'],['add','add']];if(isHSSE())tabs.push(['approvals','approvals']);tabs.push(['alerts','alerts']);if(isHSSE())tabs.push(['contacts','contacts']);
+  nav.innerHTML=tabs.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${t(l)}</button>`).join('')+`<button style="margin-left:auto" onclick="signout()">${t('signout')}</button>`;
+  ({register:viewRegister,add:viewAdd,approvals:viewApprovals,alerts:viewAlerts,contacts:viewContacts})[tab]();}
+async function go(k){tab=k;note='';if(k==='contacts'){try{contacts=(await api('listContacts')).contacts;}catch(e){errNote(e);}}render();}
+
+// ---------- auth ----------
+function renderAuth(){const f=authMode;
+  $('#app').innerHTML=`<div class="card login">${note?msg(note.replace(/^!/,''),note.startsWith('!')):''}
+  <label>${t('email')}</label><input id="a_e" type="email" autocomplete="username">
+  ${f==='login'?`<div style="height:10px"></div><label>${t('pin')}</label><input id="a_p" type="password" inputmode="numeric" autocomplete="current-password"><div class="row"><button class="btn" onclick="doLogin()">${t('signin')}</button><button class="btn sec" onclick="authMode='reset';note='';render()">${t('forgot')}</button></div>`:''}
+  ${f==='reset'?`<div class="row"><button class="btn" onclick="doReset()">${t('sendcode')}</button><button class="btn sec" onclick="authMode='login';note='';render()">${t('back')}</button></div>`:''}
+  ${f==='setpin'?`<div style="height:10px"></div><label>${t('code')}</label><input id="a_c" inputmode="numeric"><div style="height:10px"></div><label>${t('newpin')}</label><input id="a_p" type="password" inputmode="numeric" autocomplete="new-password"><div class="row"><button class="btn" onclick="doSetPin()">${t('savepin')}</button><button class="btn sec" onclick="authMode='login';note='';render()">${t('back')}</button></div>`:''}</div>`;}
+async function doLogin(){try{const r=await api('login',{email:$('#a_e').value,pin:$('#a_p').value});token=r.token;user=r.user;sessionStorage.setItem('evr_tok',token);await load();}catch(e){errNote(e);render();}}
+async function doReset(){try{const em=$('#a_e').value;await api('requestReset',{email:em});authMode='setpin';note=t('codesent');render();$('#a_e').value=em;}catch(e){errNote(e);render();}}
+async function doSetPin(){try{await api('setPin',{email:$('#a_e').value,code:$('#a_c').value,pin:$('#a_p').value});authMode='login';note=t('pinset');render();}catch(e){errNote(e);render();}}
+function signout(){token='';user=null;sessionStorage.removeItem('evr_tok');render();}
+async function load(){try{const r=await api('list');user=r.user;items=r.items;docs=r.docs;stickers=r.stickers;}catch(e){token='';user=null;sessionStorage.removeItem('evr_tok');errNote(e);}render();}
+
+// ---------- register / lists ----------
+let flt={q:'',cat:'',st:'',co:''};
+function viewRegister(){
+  const kp=[[t('total'),items.length,''],[t('fit'),items.filter(i=>i.Fit==='FIT').length,''],[t('pending'),items.filter(i=>i.Status==='Submitted'||pendingDocs(i)).length,'w'],[t('expiring'),docs.filter(d=>{const n=daysLeft(d.Expiry);return d.Verified==='Yes'&&n!==null&&n>=0&&n<=30;}).length,'w'],[t('expired'),items.filter(i=>i.Fit==='SUSPENDED'||i.Fit==='VOID').length,'r']];
+  const rows=items.filter(i=>(!flt.cat||i.Category===flt.cat)&&(!flt.st||sl(i)===flt.st)&&(!flt.co||i.Company===flt.co)&&(!flt.q||JSON.stringify(i).toLowerCase().includes(flt.q.toLowerCase())));
+  const sts=['FIT','SUSPENDED','VOID','Draft','Submitted','Rejected'];
+  $('#app').innerHTML=msg(note.replace(/^!/,''),note.startsWith('!'))+`<div class="kpis">${kp.map(k=>`<div class="kpi ${k[2]}"><b>${k[1]}</b><span>${k[0]}</span></div>`).join('')}</div>
+  <div class="bar"><input placeholder="${t('search')}" value="${esc(flt.q)}" oninput="flt.q=this.value;viewRegister();const e=document.querySelector('.bar input');e.focus();e.setSelectionRange(99,99)">
+  <select onchange="flt.cat=this.value;viewRegister()"><option value="">${t('category')}: ${t('all')}</option><option value="Vehicle" ${flt.cat==='Vehicle'?'selected':''}>${t('vehicle')}</option><option value="Heavy Equipment" ${flt.cat==='Heavy Equipment'?'selected':''}>${t('heavy')}</option></select>
+  <select onchange="flt.st=this.value;viewRegister()"><option value="">${t('status')}: ${t('all')}</option>${sts.map(s=>`<option value="${s}" ${flt.st===s?'selected':''}>${t(s)}</option>`).join('')}</select>
+  <select onchange="flt.co=this.value;viewRegister()"><option value="">${t('company')}: ${t('all')}</option>${ICS.map(s=>`<option ${flt.co===s?'selected':''}>${s}</option>`).join('')}</select>
+  <button class="btn sec" onclick="exportCsv()">${t('export')}</button></div>
+  <div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('category')}</th><th>${t('type')}</th><th>${t('plate')}</th><th>${t('company')}</th><th>${t('operator')}</th><th>${t('docs')}</th><th>${t('nextinsp')}</th><th>${t('location')}</th><th>${t('status')}</th><th>${t('sticker')}</th></tr></thead><tbody>
+  ${rows.map(i=>{const ok=i.Rules.filter(r=>r.s==='ok').length;const s=stickerOf(i.ID);return `<tr class="click" onclick="openItem('${esc(i.ID)}')"><td>${esc(i.ID)}</td><td>${esc(i.Category==='Vehicle'?t('vehicle'):t('heavy'))}</td><td>${esc(i.Type)}</td><td>${esc(i.PlateSerial)}</td><td>${esc(i.Company)}</td><td>${esc(i.OperatorName)}</td><td>${ok}/${i.Rules.length}</td><td>${i.Status==='Approved'?dpill(i.NextInspection):'-'}</td><td>${esc(t(i.LocationStatus)||i.LocationStatus)}</td><td>${spill(i)}</td><td>${s?esc(s.StickerNo):''}</td></tr>`;}).join('')||`<tr><td colspan="11">${t('none')}</td></tr>`}</tbody></table></div>`;}
+function viewApprovals(){const p=items.filter(i=>i.Status==='Submitted'||pendingDocs(i));
+  $('#app').innerHTML=`<div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('type')}</th><th>${t('plate')}</th><th>${t('company')}</th><th>${t('docs')}</th><th>${t('status')}</th></tr></thead><tbody>${p.map(i=>`<tr class="click" onclick="openItem('${esc(i.ID)}')"><td>${esc(i.ID)}</td><td>${esc(i.Type)}</td><td>${esc(i.PlateSerial)}</td><td>${esc(i.Company)}</td><td>${pendingDocs(i)} ${t('pending')}</td><td>${spill(i)}</td></tr>`).join('')||`<tr><td>${t('none')}</td></tr>`}</tbody></table></div>`;}
+function viewAlerts(){const rows=[];
+  items.filter(i=>i.Status==='Approved').forEach(i=>{i.Rules.forEach(r=>{const d=docs.find(x=>x.DocID===r.docId);if(d&&d.Expiry){const n=daysLeft(d.Expiry);if(n!==null&&n<=30)rows.push({i,w:t('d_'+r.k),date:d.Expiry,n});}});const n=daysLeft(i.NextInspection);if(n!==null&&n<=30)rows.push({i,w:t('nextinsp'),date:i.NextInspection,n});});
+  rows.sort((a,b)=>a.n-b.n);
+  $('#app').innerHTML=`<div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('plate')}</th><th>${t('company')}</th><th>${t('docs')}</th><th>${t('expiry')}</th></tr></thead><tbody>${rows.map(x=>`<tr class="click" onclick="openItem('${esc(x.i.ID)}')"><td>${esc(x.i.ID)}</td><td>${esc(x.i.PlateSerial)}</td><td>${esc(x.i.Company)}</td><td>${esc(x.w)}</td><td>${dpill(x.date)}</td></tr>`).join('')||`<tr><td colspan="5">${t('none')}</td></tr>`}</tbody></table></div>`;}
+function exportCsv(){const h=['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','Status','Fit','LocationStatus','NextInspection'];const csv=[h.join(',')].concat(items.map(i=>h.map(k=>'"'+String(i[k]||'').replace(/"/g,'""')+'"').join(','))).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='equipment-vehicle-register.csv';a.click();}
+
+// ---------- contacts ----------
+function viewContacts(){
+  $('#app').innerHTML=msg(note.replace(/^!/,''),note.startsWith('!'))+`<div class="card"><h3 style="margin-top:0">${t('cs')}</h3><div class="hint">${t('csnote')}</div>
+  <div class="grid" style="margin-top:10px" id="ctf"><div><label>${t('company')}</label><select data-f="Company">${['EcoOils'].concat(ICS).map(c=>`<option>${c}</option>`).join('')}</select></div>
+  <div><label>${t('role')}</label><select data-f="Role">${CROLES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+  <div><label>${t('name')}</label><input data-f="Name"></div><div><label>${t('email')}</label><input data-f="Email" type="email"></div></div>
+  <div class="row"><button class="btn" onclick="addContact()">${t('add2')}</button><button class="btn sec" onclick="sendNow()">${t('sendnow')}</button></div></div>
+  <div class="tw"><table><thead><tr><th>${t('company')}</th><th>${t('role')}</th><th>${t('name')}</th><th>${t('email')}</th><th></th></tr></thead><tbody>${contacts.map(c=>`<tr><td>${esc(c.Company)}</td><td>${esc(c.Role)}</td><td>${esc(c.Name)}</td><td>${esc(c.Email)}</td><td><button class="btn sec sm" onclick="rmContact('${esc(c.ContactID)}')">${t('remove')}</button></td></tr>`).join('')||`<tr><td colspan="5">${t('none')}</td></tr>`}</tbody></table></div>`;}
+function collect(root,base){const o=Object.assign({},base||{});root.querySelectorAll('[data-f]').forEach(e=>o[e.dataset.f]=e.value.trim());return o;}
+async function addContact(){try{await api('saveContact',{contact:collect($('#ctf'))});note=t('saved');await go('contacts');}catch(e){errNote(e);render();}}
+async function rmContact(id){try{await api('removeContact',{contactId:id});await go('contacts');}catch(e){errNote(e);render();}}
+async function sendNow(){try{const r=await api('sendRemindersNow');note=t('sentn')+' '+r.sent;}catch(e){errNote(e);}render();}
+
+// ---------- new entry / item dialog ----------
+function fld(k,l,v,type,opts){v=v||'';
+  if(opts)return `<div><label>${t(l)}</label><select data-f="${k}">${opts.map(o=>`<option value="${esc(o[0])}" ${o[0]===v?'selected':''}>${esc(o[1])}</option>`).join('')}</select></div>`;
+  if(type==='ta')return `<div style="grid-column:1/-1"><label>${t(l)}</label><textarea data-f="${k}" rows="2">${esc(v)}</textarea></div>`;
+  return `<div><label>${t(l)}</label><input data-f="${k}" type="${type||'text'}" value="${esc(v)}"></div>`;}
+function identHtml(i){i=i||{};const V=(i.Category||'Vehicle')==='Vehicle';
+  const types=(V?VTYPES:HTYPES).map(x=>[x,x]);if(i.Type&&!types.some(x=>x[0]===i.Type))types.push([i.Type,i.Type]);
+  return `<div class="grid"><div><label>${t('category')}</label><select data-f="Category" onchange="recat(this)"><option value="Vehicle" ${V?'selected':''}>${t('vehicle')}</option><option value="Heavy Equipment" ${V?'':'selected'}>${t('heavy')}</option></select></div>
+  ${fld('Type','type',i.Type||types[0][0],'',types)}${fld('MakeModel','make',i.MakeModel)}${fld('PlateSerial','plate',i.PlateSerial)}
+  ${user.role==='IC'?'':fld('Company','company',i.Company||ICS[0],'',ICS.map(c=>[c,c]))}
+  ${isHSSE()&&i.ID?fld('LocationStatus','location',i.LocationStatus||'Off-site','',LOCS.map(c=>[c,t(c)])):''}
+  ${fld('OperatorName','operator',i.OperatorName)}${V?fld('OperatorLicenceClass','simcls',i.OperatorLicenceClass||'B1','',SIMCLS.map(c=>[c,c])):fld('OperatorLicenceClass','siocls',i.OperatorLicenceClass)}
+  ${fld('Remarks','remarks',i.Remarks,'ta')}</div>`;}
+function recat(sel){const root=sel.closest('[data-root]');const o=collect(root);o.Type='';root.innerHTML=identHtml(o);}
+function viewAdd(){$('#app').innerHTML=msg(note.replace(/^!/,''),note.startsWith('!'))+`<div class="card"><h3 style="margin-top:0">${t('identity')}</h3><div data-root id="ff">${identHtml(null)}</div><div class="row"><button class="btn" onclick="createItem()">${t('save')}</button></div></div>`;}
+async function createItem(){try{const r=await api('saveItem',{item:collect($('#ff'))});note=t('saved');await load();tab='register';render();openItem(r.id);}catch(e){errNote(e);render();}}
+
+function openItem(id){cur=id;upk='';$('#dlg').dataset.msg='';drawItem();if(!dlg.open)dlg.showModal();}
+function drawItem(m,e){const i=items.find(x=>x.ID===cur);if(!i)return;$('#dt').textContent=i.ID+' | '+i.PlateSerial;
+  const editable=canWork()&&(isHSSE()||['Draft','Rejected','Void'].includes(i.Status));
+  $('#db').innerHTML=(m?msg(m,e):'')+`<div class="row" style="margin-top:0">${spill(i)}${i.Status==='Approved'?`<span class="hint">${t('nextinsp')}: ${esc(i.NextInspection)}</span>`:''}</div>
+  ${i.FitWhy&&i.FitWhy.length&&i.Fit!=='FIT'?`<div class="msg err">${i.FitWhy.map(esc).join('<br>')}</div>`:''}${i.DecisionNote&&['Rejected','Void'].includes(i.Status)?`<div class="msg err">${esc(i.DecisionNote)}</div>`:''}
+  <h3>${t('identity')}</h3><div data-root id="df">${identHtml(i)}</div>${editable?`<div class="row"><button class="btn sec" onclick="saveItem()">${t('save')}</button></div>`:''}
+  <h3>${t('docs')}</h3><div class="hint" style="margin-bottom:6px">${t('docnote')}</div><div class="tw"><table><thead><tr><th>${t('docs')}</th><th>${t('status')}</th><th>${t('number')}</th><th>${t('expiry')}</th><th></th></tr></thead><tbody>${i.Rules.map(r=>docRow(i,r)).join('')}</tbody></table></div>
+  ${canWork()&&['Draft','Rejected','Void'].includes(i.Status)?`<div class="row"><button class="btn" onclick="submitItem()">${t('submit')}</button></div>`:''}
+  ${isHSSE()&&['Submitted','Approved'].includes(i.Status)?inspHtml(i):''}${isHSSE()&&i.Status==='Approved'?stickerHtmlPanel(i):''}`;
+  if(!editable)$('#df').querySelectorAll('input,select,textarea').forEach(x=>x.disabled=true);}
+function docRow(i,r){const d=docs.find(x=>x.DocID===(r.pendingId||r.docId));const n=docs.filter(x=>x.ItemID===i.ID&&x.DocType===r.k).length;
+  const canV=isHSSE()&&d&&d.Verified==='';
+  let h=`<tr><td>${t('d_'+r.k)}${r.k==='photo'&&n>1?` (${n})`:''}</td><td>${rpill(r.pendingId?'unverified':r.s)}${r.pendingId?` <span class="hint">+ ${t('ok')}</span>`:''}</td><td>${esc(d&&d.Number)}</td><td>${d&&d.Expiry?dpill(d.Expiry):'-'}</td><td>${d&&canWork()?`<button class="btn sec sm" onclick="viewDoc('${d.DocID}')">${t('view')}</button> `:''}${canV?`<button class="btn sm" onclick="vdoc('${d.DocID}','Yes')">${t('verifyyes')}</button> <button class="btn red sm" onclick="vdoc('${d.DocID}','No')">${t('verifyno')}</button> `:''}${canWork()?`<button class="btn sec sm" onclick="upk='${r.k}';drawItem()">${t('upload')}</button>`:''}</td></tr>`;
+  if(upk===r.k)h+=`<tr class="upr"><td colspan="5"><div class="grid" id="upf">${r.num?`<div><label>${t('number')}</label><input data-f="number"></div>`:''}${r.exp?`<div><label>${t('expiry')}${r.exp===2?' *':''}</label><input data-f="expiry" type="date"></div>`:''}<div><label>${t('note')}</label><input data-f="note"></div><div><label>${t('file')}</label><input id="upfile" type="file" accept=".pdf,image/jpeg,image/png"${r.k==='photo'?' capture="environment"':''}></div></div><div class="row"><button class="btn" onclick="doUpload('${r.k}')">${t('doUpload')}</button><button class="btn sec" onclick="upk='';drawItem()">${t('cancel')}</button></div></td></tr>`;
+  return h;}
+function inspHtml(i){const re=i.Status==='Approved';
+  return `<h3>${t('insp')}</h3><div class="chk" id="chkf">${i.Check.map(k=>`<label><input type="checkbox" data-c="${k}"> ${t('c_'+k)}</label>`).join('')}</div>
+  <div class="grid" style="margin-top:10px"><div style="grid-column:1/-1"><label>${t('inspnotes')}</label><textarea id="inotes" rows="2"></textarea></div></div>
+  <div class="row"><button class="btn" onclick="approveItem()">${re?t('reinsp'):t('approve')}</button>${re?'':`<button class="btn red" onclick="rejectItem()">${t('reject')}</button>`}</div>`;}
+function stickerHtmlPanel(i){const s=stickerOf(i.ID);if(!s)return '';const can=s.PrintCount===0||s.ReprintAllowed;
+  return `<h3>${t('stk')}</h3><div class="row" style="margin-top:0"><span class="pill ok">${esc(s.StickerNo)}</span><span class="pill ${s.PrintCount?'pend':'warn'}">${s.PrintCount?t('printed')+' '+esc((s.PrintedAt||'').slice(0,10)):t('notprinted')}</span></div>
+  <div class="row"><button class="btn sec" onclick="stickerPreview()">${t('preview')}</button><button class="btn" ${can?'':'disabled'} onclick="stickerPrint()">${t('printstk')}</button>${s.PrintCount&&!s.ReprintAllowed?`<button class="btn sec" onclick="allowReprint()">${t('reprint')}</button>`:''}<button class="btn red" onclick="voidItem()">${t('voidit')}</button></div>`;}
+
+// ---------- item actions ----------
+async function refresh(m,e){await load();drawItem(m,e);}
+async function saveItem(){try{const i=items.find(x=>x.ID===cur);await api('saveItem',{item:collect($('#df'),i)});await refresh(t('saved'));}catch(e){drawItem(e.message,1);}}
+async function submitItem(){try{await api('submit',{itemId:cur});await refresh(t('submitted'));}catch(e){drawItem(e.message,1);}}
+async function readFile(f){
+  const b64=x=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(x);});
+  if(f.type==='application/pdf'){if(f.size>3.5*1048576)throw new Error(t('toobig'));return{mime:f.type,b64:await b64(f)};}
+  if(!/^image\/(jpeg|png)$/.test(f.type))throw new Error(t('badtype'));
+  const img=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(f);});
+  const sc=Math.min(1,1800/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  return{mime:'image/jpeg',b64:c.toDataURL('image/jpeg',.8).split(',')[1]};}
+async function doUpload(k){try{const f=$('#upfile').files[0];if(!f)throw new Error(t('file'));const o=collect($('#upf')),fl=await readFile(f);
+  await api('uploadDoc',{itemId:cur,docType:k,number:o.number||'',expiry:o.expiry||'',note:o.note||'',fileName:f.name,mime:fl.mime,b64:fl.b64});upk='';await refresh(t('uploaded'));}catch(e){drawItem(e.message,1);}}
+async function viewDoc(id){const w=window.open('','_blank');try{const r=await api('getFile',{docId:id});const bin=atob(r.b64),u=new Uint8Array(bin.length);for(let n=0;n<bin.length;n++)u[n]=bin.charCodeAt(n);w.location=URL.createObjectURL(new Blob([u],{type:r.mime}));}catch(e){if(w)w.close();drawItem(e.message,1);}}
+async function vdoc(id,res){let note2='';if(res==='No'){note2=prompt(t('rejreason'))||'';if(!note2)return;}try{await api('verifyDoc',{docId:id,result:res,note:note2});await refresh();}catch(e){drawItem(e.message,1);}}
+function checklist(){const o={};document.querySelectorAll('[data-c]').forEach(x=>o[x.dataset.c]=x.checked);return o;}
+async function approveItem(){try{const r=await api('approve',{itemId:cur,checklist:checklist(),notes:($('#inotes').value||'').trim()});await refresh(r.created?`${t('stk')}: ${r.stickerNo}`:t('saved'));}catch(e){drawItem(e.message,1);}}
+async function rejectItem(){const n=prompt(t('rejreason'));if(!n)return;try{await api('reject',{itemId:cur,note:n});await refresh(t('saved'));}catch(e){drawItem(e.message,1);}}
+async function voidItem(){const n=prompt(t('voidreason'));if(!n)return;try{await api('voidItem',{itemId:cur,reason:n});await refresh(t('saved'));}catch(e){drawItem(e.message,1);}}
+async function allowReprint(){const n=prompt(t('reprintreason'));if(!n)return;try{await api('allowReprint',{itemId:cur,reason:n});await refresh(t('saved'));}catch(e){drawItem(e.message,1);}}
+
+// ---------- sticker (QR opens the live verification page) ----------
+function qrSvg(url){const q=qrcode(0,'M');q.addData(url);q.make();return q.createSvgTag(4,0).replace(/ width="[^"]*"/,'').replace(/ height="[^"]*"/,'');}
+function stickerDoc(s,i,preview){
+  const url=location.href.split('#')[0].split('?')[0]+'?v='+encodeURIComponent(i.ID)+'&t='+encodeURIComponent(s.Token);
+  const V=i.Category==='Vehicle';
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(s.StickerNo)}</title><link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>@page{size:90mm 128mm;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Jost,Arial,sans-serif;color:#222}
+.s{width:90mm;height:128mm;border:.7mm solid #222;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.top{background:#FBCE07;padding:2.5mm 4mm;display:flex;align-items:center;justify-content:space-between;border-bottom:.7mm solid #222}
+.top small{font-size:6pt;letter-spacing:.12em;text-transform:uppercase;text-align:right;line-height:1.3}
+.pass{padding:2.5mm 4mm 1mm;text-align:center}.pass b{display:block;font-size:15pt;letter-spacing:.14em;color:#2e7d32;font-weight:600}
+.pass .en{font-size:7.6pt;font-weight:500;line-height:1.25;text-transform:uppercase;letter-spacing:.03em}.pass .id{font-size:6.6pt;font-style:italic;color:#555;margin-top:.5mm}
+.plate{margin:1.5mm 4mm;border:.5mm solid #222;text-align:center;padding:1mm;font-size:17pt;font-weight:600;letter-spacing:.1em}
+.meta{display:flex;gap:3mm;padding:0 4mm;align-items:center}.meta .q{width:30mm;height:30mm;flex:none}.meta .q svg{width:100%;height:100%}
+.meta .t{font-size:7pt;line-height:1.45}.meta .t b{font-weight:500;color:#777;text-transform:uppercase;letter-spacing:.06em;font-size:6pt;display:block;margin-top:1mm}
+.scan{font-size:5.8pt;text-transform:uppercase;letter-spacing:.06em;text-align:center;padding:.8mm 4mm 0;color:#555}
+.disc{margin:auto 4mm 1.5mm;padding-top:1.2mm;border-top:.3mm solid #999;font-size:5.4pt;line-height:1.28;color:#333}.disc p{margin:0 0 .8mm}
+.foot{background:#222;color:#fff;font-size:5.8pt;letter-spacing:.1em;text-align:center;padding:1.1mm;text-transform:uppercase}
+.wm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22pt;font-weight:600;color:rgba(221,29,33,.35);transform:rotate(-28deg);text-align:center;pointer-events:none}
+</style></head><body><div class="s">
+<div class="top">${lockup(86,40)}<small>${V?'Vehicle':'Equipment'}<br>Inspection</small></div>
+<div class="pass"><b>&#10003; PASSED</b><div class="en">${V?'Vehicle':'Equipment'} has passed EcoOils Initial Inspection and Document Verification</div><div class="id">${V?'Kendaraan':'Peralatan'} lulus Inspeksi Awal dan Verifikasi Dokumen EcoOils</div></div>
+<div class="plate">${esc(i.PlateSerial)}</div>
+<div class="meta"><div class="q">${qrSvg(url)}</div><div class="t"><b>Type / Jenis</b>${esc(i.Type)}<b>Company / Perusahaan</b>${esc(i.Company)}<b>Issued / Terbit</b>${esc(s.IssuedAt)}<b>Sticker / Stiker</b>${esc(s.StickerNo)}</div></div>
+<div class="scan">Scan to verify live status / Pindai untuk verifikasi status terkini</div>
+<div class="disc"><p><b>DISCLAIMER.</b> This sticker confirms that the ${V?'vehicle':'equipment'} passed EcoOils Initial Inspection and document verification on the date of issue only. If any damage or defect is identified during normal inspection, this inspection is VOID and the ${V?'vehicle':'equipment'} must be re-inspected before further use on site. Validity is confirmed only by scanning the QR code. Single issue, non-transferable.</p>
+<p><b>PERNYATAAN.</b> Stiker ini menyatakan ${V?'kendaraan':'peralatan'} lulus Inspeksi Awal dan verifikasi dokumen EcoOils pada tanggal terbit. Jika ditemukan kerusakan atau cacat saat inspeksi normal, inspeksi ini BATAL dan ${V?'kendaraan':'peralatan'} wajib diinspeksi ulang sebelum digunakan di lokasi. Keabsahan hanya dipastikan dengan memindai kode QR. Satu kali terbit, tidak dapat dipindahtangankan.</p></div>
+<div class="foot">Single print &middot; S/N ${esc(s.StickerNo)}</div>
+${preview?'<div class="wm">PREVIEW<br>NOT VALID</div>':''}</div></body></html>`;}
+function stickerPreview(){const i=items.find(x=>x.ID===cur),s=stickerOf(cur);const w=window.open('','_blank');w.document.open();w.document.write(stickerDoc(s,i,true));w.document.close();}
+async function stickerPrint(){if(!confirm(t('printconfirm')))return;const w=window.open('','_blank');
+  try{const r=await api('printSticker',{itemId:cur});w.document.open();w.document.write(stickerDoc(r.sticker,r.item,false));w.document.close();setTimeout(()=>w.print(),900);await refresh();}catch(e){if(w)w.close();drawItem(e.message,1);}}
+
+// ---------- public verification page (QR target) ----------
+async function renderVerify(){
+  $('#app').innerHTML='<div class="vbox"></div>';const box=$('#app .vbox');
+  try{const v=(await api('verify',{id:VERIFY.id,t:VERIFY.t})).v;
+    const col={FIT:'#2e7d32',SUSPENDED:'#e08a00',VOID:'#DD1D21','NOT APPROVED':'#6b7b8c'}[v.Fit]||'#6b7b8c',txt={FIT:t('vfit'),SUSPENDED:t('vsusp'),VOID:t('vvoid'),'NOT APPROVED':t('vna')}[v.Fit];
+    box.innerHTML=`<div class="banner" style="background:${col}"><b>${txt}</b></div>
+    <div class="card"><table><tbody><tr><td>${t('plate')}</td><td><b>${esc(v.PlateSerial)}</b></td></tr><tr><td>${t('type')}</td><td>${esc(v.Type)}${v.MakeModel?' | '+esc(v.MakeModel):''}</td></tr><tr><td>${t('company')}</td><td>${esc(v.Company)}</td></tr><tr><td>${t('id')}</td><td>${esc(v.ID)}</td></tr><tr><td>${t('stickerno')}</td><td>${esc(v.StickerNo)}</td></tr><tr><td>${t('issued')}</td><td>${esc(v.IssuedAt)}</td></tr><tr><td>${t('nextinsp')}</td><td>${esc(v.NextInspection)}</td></tr></tbody></table>
+    ${v.Why&&v.Why.length&&v.Fit!=='FIT'?`<div class="msg err" style="margin-top:12px"><b>${t('reason')}:</b><br>${v.Why.map(esc).join('<br>')}</div>`:''}</div>
+    <div class="card"><h3 style="margin-top:0">${t('docs')}</h3><table><tbody>${v.Docs.map(d=>`<tr><td>${t('d_'+d.k)}</td><td>${rpill(d.s)}</td></tr>`).join('')}</tbody></table></div>`;
+  }catch(e){box.innerHTML=`<div class="banner" style="background:#DD1D21"><b>${esc(e.message)}</b></div>`;}}
+
+(async function init(){applyLang();if(VERIFY)return render();if(token)await load();else render();})();
+</script>
+</body>
+</html>
