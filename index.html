@@ -88,7 +88,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.2.7';
+const VERSION='1.2.8';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -284,16 +284,16 @@ async function readFile(f){
   const img=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(f);});
   const sc=Math.min(1,1800/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
   return{mime:'image/jpeg',b64:c.toDataURL('image/jpeg',.8).split(',')[1]};}
-function uploadBar(i){if(!canWork())return '';
+function uploadBar(i){if(!canWork())return `<div class="msg err">Your account role (${esc(user&&user.role)}) cannot upload documents. Ask HSSE to set your role to IC in the Users sheet.</div>`;
   return `<div class="upbar" id="upf"><div class="w2"><label>${t('docname')}</label><select id="upk" onchange="syncUp()">${i.Rules.map(r=>`<option value="${r.k}">${esc(t('d_'+r.k))}${r.s==='ok'?'':' *'}</option>`).join('')}</select></div>
   <div><label>${t('number')}</label><input id="upnum"></div><div><label id="uplbl">${t('validity')}</label><input id="upexp" type="date"></div>
-  <div class="w2"><label>${t('file')}</label><input id="upfile" type="file" accept=".pdf,image/jpeg,image/png"></div><button class="btn" onclick="doUpload()">${t('doUpload')}</button></div>`;}
+  <div class="w2"><label>${t('file')}</label><input id="upfile" type="file" accept=".pdf,image/jpeg,image/png"></div><button class="btn" id="upbtn" onclick="doUpload()">${t('doUpload')}</button></div>`;}
 function syncUp(){const i=items.find(x=>x.ID===cur),k=$('#upk').value,r=i.Rules.find(x=>x.k===k);if(!r)return;
   const num=$('#upnum'),ex=$('#upexp');num.disabled=!r.num;if(!r.num)num.value='';ex.disabled=!r.exp;if(!r.exp)ex.value='';
   ex.min=new Date().toISOString().slice(0,10);$('#uplbl').textContent=t('validity')+(r.exp===2?' (opt.)':'');}
 function pickDoc(k){const s=$('#upk');if(!s)return;s.value=k;syncUp();s.scrollIntoView({block:'center'});$('#upfile').focus();}
-async function doUpload(){try{const k=$('#upk').value,f=$('#upfile').files[0];if(!f)throw new Error(t('file'));const fl=await readFile(f);
-  await api('uploadDoc',{itemId:cur,docType:k,number:$('#upnum').value.trim(),expiry:$('#upexp').value,note:'',fileName:f.name,mime:fl.mime,b64:fl.b64});await refresh(t('uploaded'));}catch(e){drawItem(e.message,1);}}
+async function doUpload(){const bt=$('#upbtn');try{const k=$('#upk').value,f=$('#upfile').files[0];if(!f)throw new Error('Choose a file first (PDF, JPG or PNG, under 3.5 MB)');if(bt){bt.disabled=true;bt.textContent='Uploading...';}const fl=await readFile(f);
+  await api('uploadDoc',{itemId:cur,docType:k,number:$('#upnum').value.trim(),expiry:$('#upexp').value,note:'',fileName:f.name,mime:fl.mime,b64:fl.b64});await refresh(t('uploaded'));}catch(e){drawItem(e.message,1);}finally{const b2=$('#upbtn');if(b2){b2.disabled=false;b2.textContent=t('doUpload');}}}
 async function viewDoc(id){const w=window.open('','_blank');try{const r=await api('getFile',{docId:id});const bin=atob(r.b64),u=new Uint8Array(bin.length);for(let n=0;n<bin.length;n++)u[n]=bin.charCodeAt(n);w.location=URL.createObjectURL(new Blob([u],{type:r.mime}));}catch(e){if(w)w.close();drawItem(e.message,1);}}
 async function vdoc(id,res){let note2='';if(res==='No'){note2=prompt(t('rejreason'))||'';if(!note2)return;}try{await api('verifyDoc',{docId:id,result:res,note:note2});await refresh();}catch(e){drawItem(e.message,1);}}
 function checklist(){const o={};document.querySelectorAll('[data-c]').forEach(x=>o[x.dataset.c]=x.checked);return o;}
