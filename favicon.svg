@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- tracks -->
+  <rect x="6" y="48" width="46" height="11" rx="5.5" fill="#404040"/>
+  <circle cx="14" cy="53.5" r="3" fill="#FDC402"/><circle cx="44" cy="53.5" r="3" fill="#FDC402"/>
+  <!-- boom + arm (dark outline under yellow) -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="34,38 17,13 9,36" stroke="#404040" stroke-width="8.5"/>
+    <polyline points="34,38 17,13 9,36" stroke="#FDC402" stroke-width="5.5"/>
+  </g>
+  <!-- bucket -->
+  <path d="M3 35 L14 33 L13 46 L5 47 Z" fill="#404040" stroke="#404040" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M5 47 L13 46 M6 47 v3 M9 46.6 v3 M12 46.2 v3" stroke="#404040" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- body -->
+  <rect x="22" y="36" width="34" height="12" rx="3" fill="#FDC402" stroke="#404040" stroke-width="2"/>
+  <!-- cab -->
+  <path d="M34 36 L36 22 Q36.4 20 38.5 20 L50 20 Q52 20 52.4 22 L54 36 Z" fill="#FDC402" stroke="#404040" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M39 24 L49 24 L50 33 L38 33 Z" fill="#9fc3d6" stroke="#404040" stroke-width="1.2" stroke-linejoin="round"/>
+</svg>
