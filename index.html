@@ -88,7 +88,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.2.6';
+const VERSION='1.2.7';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -194,7 +194,9 @@ async function doLogin(){try{const r=await api('login',{email:$('#a_e').value,pi
 async function doReset(){try{const em=$('#a_e').value;await api('requestReset',{email:em});authMode='setpin';note=t('codesent');render();$('#a_e').value=em;}catch(e){errNote(e);render();}}
 async function doSetPin(){try{await api('setPin',{email:$('#a_e').value,code:$('#a_c').value,pin:$('#a_p').value});authMode='login';note=t('pinset');render();}catch(e){errNote(e);render();}}
 async function signout(){try{if(token)await api('logout');}catch(e){}token='';user=null;localStorage.removeItem('evr_tok');render();}
-async function load(){try{const r=await api('list');user=r.user;items=r.items;docs=r.docs;stickers=r.stickers;}catch(e){token='';user=null;localStorage.removeItem('evr_tok');errNote(e);}render();}
+async function load(){try{const r=await api('list');
+  if(!Array.isArray(r.items)||!Array.isArray(r.docs)||!Array.isArray(r.stickers)||r.items.some(i=>!Array.isArray(i.Rules))){user=r.user||user;items=[];docs=[];stickers=[];note='!The backend (Code.gs) is older than this page. In Apps Script paste the latest Code.gs, run setup(), then Deploy > Manage deployments > Edit > New version > Deploy.';render();return;}
+  user=r.user;items=r.items;docs=r.docs;stickers=r.stickers;}catch(e){token='';user=null;localStorage.removeItem('evr_tok');errNote(e);}render();}
 
 // ---------- register / lists ----------
 let flt={q:'',cat:'',st:'',co:''};
