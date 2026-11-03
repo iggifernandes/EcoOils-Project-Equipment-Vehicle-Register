@@ -44,6 +44,7 @@ button.btn{background:var(--y);border:0;padding:9px 18px;font:inherit;text-trans
 button.btn.sec{background:#fff;border:1px solid var(--ink)}button.btn.red{background:var(--r);color:#fff}
 button.btn.sm{padding:4px 10px;font-size:.7rem}
 button.btn:disabled{opacity:.45;cursor:not-allowed}
+.fold{margin:0 0 12px;border:1px solid var(--line);background:#fff}.fold>summary{cursor:pointer;padding:10px 12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}.fold>summary .hint{margin-left:10px;text-transform:none;letter-spacing:0}.fold h4{margin:10px 12px 6px;font-weight:500;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#666}.fold .tw{border:0;border-top:1px solid var(--line)}
 .tw{overflow-x:auto;background:#fff;border:1px solid var(--line)}
 table{border-collapse:collapse;width:100%;font-size:.85rem}
 th{text-align:left;font-weight:500;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--grey);padding:9px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
@@ -88,7 +89,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.2.8';
+const VERSION='1.3.0';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -210,8 +211,14 @@ function viewRegister(){
   <select onchange="flt.st=this.value;viewRegister()"><option value="">${t('status')}: ${t('all')}</option>${sts.map(s=>`<option value="${s}" ${flt.st===s?'selected':''}>${t(s)}</option>`).join('')}</select>
   <select onchange="flt.co=this.value;viewRegister()"><option value="">${t('company')}: ${t('all')}</option>${COS.map(s=>`<option ${flt.co===s?'selected':''}>${s}</option>`).join('')}</select>
   <button class="btn sec" onclick="exportCsv()">${t('export')}</button></div>
-  <div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('category')}</th><th>${t('type')}</th><th>${t('plate')}</th><th>${t('company')}</th><th>${t('operator')}</th><th>${t('docs')}</th><th>${t('nextinsp')}</th><th>${t('location')}</th><th>${t('status')}</th><th>${t('sticker')}</th></tr></thead><tbody>
-  ${rows.map(i=>{const ok=i.Rules.filter(r=>r.s==='ok').length;const s=stickerOf(i.ID);return `<tr class="click" onclick="openItem('${esc(i.ID)}')"><td>${esc(i.ID)}</td><td>${esc(i.Category==='Vehicle'?t('vehicle'):t('heavy'))}</td><td>${esc(i.Type)}</td><td>${esc(i.PlateSerial)}</td><td>${esc(i.Company)}</td><td>${esc(i.OperatorName)}</td><td>${ok}/${i.Rules.length}</td><td>${i.Status==='Approved'?dpill(i.NextInspection):'-'}</td><td>${esc(t(i.LocationStatus)||i.LocationStatus)}</td><td>${spill(i)}</td><td>${s?esc(s.StickerNo):''}</td></tr>`;}).join('')||`<tr><td colspan="11">${t('none')}</td></tr>`}</tbody></table></div>`;}
+  ${folders(rows)}`;}
+const rowFn=i=>{const ok=i.Rules.filter(r=>r.s==='ok').length;const s=stickerOf(i.ID);return `<tr class="click" onclick="openItem('${esc(i.ID)}')"><td>${esc(i.ID)}</td><td>${esc(i.Type)}</td><td>${esc(i.PlateSerial)}</td><td>${esc(i.OperatorName)}</td><td>${ok}/${i.Rules.length}</td><td>${i.Status==='Approved'?dpill(i.NextInspection):'-'}</td><td>${esc(t(i.LocationStatus)||i.LocationStatus)}</td><td>${spill(i)}</td><td>${s?esc(s.StickerNo):''}</td></tr>`;};
+function tbl(list){return `<div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('type')}</th><th>${t('plate')}</th><th>${t('operator')}</th><th>${t('docs')}</th><th>${t('nextinsp')}</th><th>${t('location')}</th><th>${t('status')}</th><th>${t('sticker')}</th></tr></thead><tbody>${list.map(rowFn).join('')||`<tr><td colspan="9">${t('none')}</td></tr>`}</tbody></table></div>`;}
+function folders(rows){const cos=COS.filter(c=>!flt.co||c===flt.co);
+  return cos.map(c=>{const mine=rows.filter(i=>i.Company===c),lv=mine.filter(i=>i.Category==='Vehicle'),hv=mine.filter(i=>i.Category!=='Vehicle');
+    const open=mine.length?'open':'';const LV={en:'Light vehicles',id:'Kendaraan ringan',ms:'Kenderaan ringan'}[lang]||'Light vehicles',HV={en:'Heavy equipment',id:'Alat berat',ms:'Peralatan berat'}[lang]||'Heavy equipment';
+    return `<details class="fold" ${open}><summary>&#128193; ${esc(c)} <span class="hint">${mine.length} | ${LV}: ${lv.length} | ${HV}: ${hv.length}</span></summary>
+    <h4>${LV} (${lv.length})</h4>${tbl(lv)}<h4>${HV} (${hv.length})</h4>${tbl(hv)}</details>`;}).join('');}
 function viewApprovals(){const p=items.filter(i=>i.Status==='Submitted'||pendingDocs(i));
   $('#app').innerHTML=`<div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('type')}</th><th>${t('plate')}</th><th>${t('company')}</th><th>${t('docs')}</th><th>${t('status')}</th></tr></thead><tbody>${p.map(i=>`<tr class="click" onclick="openItem('${esc(i.ID)}')"><td>${esc(i.ID)}</td><td>${esc(i.Type)}</td><td>${esc(i.PlateSerial)}</td><td>${esc(i.Company)}</td><td>${pendingDocs(i)} ${t('pending')}</td><td>${spill(i)}</td></tr>`).join('')||`<tr><td>${t('none')}</td></tr>`}</tbody></table></div>`;}
 function viewAlerts(){const rows=[];

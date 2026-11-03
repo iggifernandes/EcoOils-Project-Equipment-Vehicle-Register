@@ -1,5 +1,5 @@
-// VERSION 1.2.2 | Equipment & Vehicle Register backend | 2026-11-03
-const VERSION = '1.2.2';
+// VERSION 1.3.0 | Equipment & Vehicle Register backend | 2026-11-03
+const VERSION = '1.3.0';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -307,10 +307,15 @@ function submitItem(user, id) {
 }
 
 // ---------- documents ----------
-function itemFolder(itemId) {
+function subFolder(parent, name) {
+  const f = parent.getFoldersByName(name);
+  return f.hasNext() ? f.next() : parent.createFolder(name);
+}
+// Drive layout: root / <Company> / <Light vehicles|Heavy equipment> / <ItemID>
+function itemFolder(itemId, company, category) {
   const root = DriveApp.getFolderById(DOC_FOLDER_ID);
-  const it = root.getFoldersByName(itemId);
-  return it.hasNext() ? it.next() : root.createFolder(itemId);
+  const co = subFolder(root, String(company || 'Other').replace(/[\\\/]/g, '-'));
+  return subFolder(subFolder(co, category === 'Vehicle' ? 'Light vehicles' : 'Heavy equipment'), itemId);
 }
 
 function uploadDoc(user, p) {
@@ -327,7 +332,7 @@ function uploadDoc(user, p) {
   if (!bytes.length || bytes.length > MAX_BYTES) throw new Error('File must be under 4 MB');
   const safe = String(p.fileName || 'file').replace(/[^\w.\-]+/g, '_').slice(0, 60);
   const docId = 'D-' + Utilities.getUuid().slice(0, 8), now = iso();
-  const file = itemFolder(it.ID).createFile(Utilities.newBlob(bytes, p.mime, it.ID + '_' + p.docType + '_' + docId + '_' + safe));
+  const file = itemFolder(it.ID, it.Company, it.Category).createFile(Utilities.newBlob(bytes, p.mime, it.ID + '_' + p.docType + '_' + docId + '_' + safe));
   if (p.docType !== 'photo') { // older rows that were never verified are replaced; a verified one stays until the new one is verified
     readAll('Documents', DOC_H).forEach(d => {
       if (d.ItemID === it.ID && d.DocType === p.docType && isTrue(d.Current) && d.Verified !== 'Yes') { d.Current = 'FALSE'; writeRow('Documents', DOC_H, d); }
