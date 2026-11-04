@@ -1,5 +1,5 @@
-// VERSION 1.6.1 | Equipment & Vehicle Register backend | 2026-11-03
-const VERSION = '1.6.1';
+// VERSION 1.6.2 | Equipment & Vehicle Register backend | 2026-11-03
+const VERSION = '1.6.2';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -13,7 +13,12 @@ const CT_H = ['ContactID','Company','Role','Name','Email','Active'];
 const RL_H = ['Key','SentAt'];
 const SS_H = ['TokenHash','Email','Expires'];
 const CT_ROLES = ['Logistics', 'HR', 'HSSE'];
-const REMIND_AT = [30, 14, 7, 3, 0]; // days before expiry when a reminder is sent; after expiry it repeats weekly
+const REMIND_AT = [30, 14, 7, 3, 0];   // days before expiry when a reminder is sent
+const REMIND_LONG = [60, 30, 14, 7, 3, 0]; // documents that take weeks to renew get an earlier first reminder
+const LONG_LEAD = ['silo', 'rep', 'sio', 'kir', 'sim', 'stnk']; // SILO, PJK3 report, operator SIO, KIR, SIM, STNK
+const EXPIRED_EVERY_DAYS = 3;          // after expiry the reminder repeats every 3 days
+const MAIL_NAME = 'EcoOils HSSE | Equipment & Vehicle Register';
+const MAIL_FROM = ADMIN_EMAIL;         // shown as the sender when it is a verified Gmail "Send mail as" alias, otherwise used as Reply-To
 const USER_H = ['Email','Name','Role','Company','Active','Salt','Hash'];
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -107,6 +112,19 @@ function doPost(e) {
     return out({ ok: false, error: String(err.message || err) });
   }
 }
+// Sends as MAIL_FROM when Gmail has it as a verified alias (Settings > Accounts > Send mail as); otherwise the sender is the
+// script owner's account, with MAIL_NAME as the display name and replies going to MAIL_FROM.
+function sendMail(to, subject, body) {
+  try {
+    const al = GmailApp.getAliases().map(a => a.toLowerCase());
+    if (al.indexOf(MAIL_FROM.toLowerCase()) >= 0) { GmailApp.sendEmail(to, subject, body, { from: MAIL_FROM, name: MAIL_NAME, replyTo: MAIL_FROM }); return 'alias'; }
+  } catch (e) { /* Gmail not authorised or alias not set up: use the fallback below */ }
+  MailApp.sendEmail(to, subject, body, { name: MAIL_NAME, replyTo: MAIL_FROM });
+  return 'default';
+}
+function mailCheck() { // run once from the editor: tells you which sender will be used
+  console.log(GmailApp.getAliases().map(a => a.toLowerCase()).indexOf(MAIL_FROM.toLowerCase()) >= 0 ? 'Emails will be sent FROM ' + MAIL_FROM : 'Alias not set up: emails come from the script owner account, replies go to ' + MAIL_FROM);
+}
 function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
 // ---------- generic sheet helpers ----------
@@ -150,7 +168,7 @@ function requestReset(email) {
   if (u) { // same response whether or not the email exists
     const code = String(Math.floor(100000 + Math.random() * 900000));
     CacheService.getScriptCache().put('reset_' + norm(email), code, 900);
-    MailApp.sendEmail(email, 'Equipment & Vehicle Register - PIN reset code',
+    sendMail(email, 'Equipment & Vehicle Register - PIN reset code',
       'Your one-time code is ' + code + '. It is valid for 15 minutes.\nIf you did not request this, ignore this email.');
   }
   return { ok: true };
@@ -554,9 +572,9 @@ function installTrigger() {
 function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5); }
 
 // Returns the key suffix when a reminder is due today, else ''.
-function reminderStage(days) {
-  if (days < 0) return 'X' + Math.floor(-days / 7); // expired: repeats every 7 days
-  const t = REMIND_AT.filter(x => x >= days).sort((a, b) => a - b)[0];
+function reminderStage(days, long) {
+  if (days < 0) return 'X' + Math.floor(-days / EXPIRED_EVERY_DAYS); // expired: repeats every few days
+  const t = (long ? REMIND_LONG : REMIND_AT).filter(x => x >= days).sort((a, b) => a - b)[0];
   return t === undefined ? '' : 'T' + t;
 }
 
@@ -571,11 +589,11 @@ function sendReminders() {
     const entries = [];
     ruleStates(i, docs, today).forEach(r => {
       const d = docs.filter(x => x.DocID === r.docId)[0];
-      if (d && d.Expiry) entries.push({ what: DOCL[r.k] || r.k, date: d.Expiry, base: i.ID + '|' + r.k + '|' + d.Expiry });
+      if (d && d.Expiry) entries.push({ what: DOCL[r.k] || r.k, date: d.Expiry, base: i.ID + '|' + r.k + '|' + d.Expiry, long: LONG_LEAD.indexOf(r.k) >= 0 });
     });
     if (i.NextInspection) entries.push({ what: 'EcoOils approval / re-inspection', date: i.NextInspection, base: i.ID + '|APPROVAL|' + i.NextInspection });
     entries.forEach(e => {
-      const days = daysBetween(today, e.date), stage = reminderStage(days);
+      const days = daysBetween(today, e.date), stage = reminderStage(days, e.long);
       if (!stage) return;
       const key = e.base + '|' + stage;
       if (sent[key]) return;
@@ -593,7 +611,7 @@ function sendReminders() {
     const body = 'Equipment & Vehicle Register reminder for ' + co + '.\n\n' + lines.join('\n') +
       '\n\nExpired items are suspended at the gate (the sticker QR will show SUSPENDED). Please upload the renewed document in the register, or request re-inspection for the approval, so HSSE can verify it.' +
       (to.length ? '' : '\n\n(No contacts are registered for ' + co + ' yet: add them in the Contacts tab.)');
-    MailApp.sendEmail(rec.join(','), '[EVR] ' + byCo[co].length + ' expiry reminder(s) - ' + co, body);
+    sendMail(rec.join(','), '[EVR] ' + byCo[co].length + ' expiry reminder(s) - ' + co, body);
     mails++;
   });
   // log only the keys of companies that actually had a recipient
