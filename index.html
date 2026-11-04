@@ -89,7 +89,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.3.0';
+const VERSION='1.3.1';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -214,7 +214,7 @@ function viewRegister(){
   ${folders(rows)}`;}
 const rowFn=i=>{const ok=i.Rules.filter(r=>r.s==='ok').length;const s=stickerOf(i.ID);return `<tr class="click" onclick="openItem('${esc(i.ID)}')"><td>${esc(i.ID)}</td><td>${esc(i.Type)}</td><td>${esc(i.PlateSerial)}</td><td>${esc(i.OperatorName)}</td><td>${ok}/${i.Rules.length}</td><td>${i.Status==='Approved'?dpill(i.NextInspection):'-'}</td><td>${esc(t(i.LocationStatus)||i.LocationStatus)}</td><td>${spill(i)}</td><td>${s?esc(s.StickerNo):''}</td></tr>`;};
 function tbl(list){return `<div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('type')}</th><th>${t('plate')}</th><th>${t('operator')}</th><th>${t('docs')}</th><th>${t('nextinsp')}</th><th>${t('location')}</th><th>${t('status')}</th><th>${t('sticker')}</th></tr></thead><tbody>${list.map(rowFn).join('')||`<tr><td colspan="9">${t('none')}</td></tr>`}</tbody></table></div>`;}
-function folders(rows){const cos=COS.filter(c=>!flt.co||c===flt.co);
+function folders(rows){const cos=COS.concat([...new Set(items.map(i=>i.Company))].filter(c=>c&&!COS.includes(c))).filter(c=>!flt.co||c===flt.co);
   return cos.map(c=>{const mine=rows.filter(i=>i.Company===c),lv=mine.filter(i=>i.Category==='Vehicle'),hv=mine.filter(i=>i.Category!=='Vehicle');
     const open=mine.length?'open':'';const LV={en:'Light vehicles',id:'Kendaraan ringan',ms:'Kenderaan ringan'}[lang]||'Light vehicles',HV={en:'Heavy equipment',id:'Alat berat',ms:'Peralatan berat'}[lang]||'Heavy equipment';
     return `<details class="fold" ${open}><summary>&#128193; ${esc(c)} <span class="hint">${mine.length} | ${LV}: ${lv.length} | ${HV}: ${hv.length}</span></summary>

@@ -1,5 +1,5 @@
-// VERSION 1.3.0 | Equipment & Vehicle Register backend | 2026-11-03
-const VERSION = '1.3.0';
+// VERSION 1.3.1 | Equipment & Vehicle Register backend | 2026-11-03
+const VERSION = '1.3.1';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -165,7 +165,7 @@ function login(email, pin) {
     throw new Error('Wrong email or PIN. Use "Forgot PIN" to set one.');
   }
   cache.remove(fk);
-  const user = { email: u.vals[0], name: u.vals[1], role: u.vals[2], company: u.vals[3] };
+  const user = { email: u.vals[0], name: u.vals[1], role: effRole(u.vals[2], u.vals[3]), company: u.vals[3] };
   return { ok: true, token: newSession(u.vals[0]), user: user, days: SESSION_DAYS };
 }
 // ---------- sessions (stay signed in for SESSION_DAYS; only a hash of the token is stored) ----------
@@ -196,11 +196,18 @@ function auth(token) {
   if (!s || s.Expires < iso()) throw new Error('Session expired. Please sign in again.');
   const u = findUser(s.Email); // role changes and deactivation apply immediately
   if (!u) throw new Error('Session expired. Please sign in again.');
-  return { email: u.vals[0], name: u.vals[1], role: u.vals[2], company: u.vals[3] };
+  return { email: u.vals[0], name: u.vals[1], role: effRole(u.vals[2], u.vals[3]), company: u.vals[3] };
 }
 function logout(token) {
   if (token) { const h = tokenHash(token); dropSessions(s => s.TokenHash === h); }
   return { ok: true };
+}
+// Sheet wording is forgiving: "HSSE Manager", "hsse", "Admin" at EcoOils = HSSE; any contractor company = IC; "viewer" = Viewer.
+function effRole(role, company) {
+  const r = norm(role), eco = norm(company) === 'ecooils';
+  if (r.indexOf('view') === 0) return 'Viewer';
+  if (eco) return (r.indexOf('hsse') === 0 || r.indexOf('admin') === 0) ? 'HSSE' : 'Viewer';
+  return 'IC';
 }
 function canSee(u, it) { return u.role === 'HSSE' || u.role === 'Viewer' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
 function canWork(u, it) { return u.role === 'HSSE' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
