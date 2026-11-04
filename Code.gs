@@ -1,5 +1,5 @@
-// VERSION 1.4.0 | Equipment & Vehicle Register backend | 2026-11-03
-const VERSION = '1.4.0';
+// VERSION 1.6.1 | Equipment & Vehicle Register backend | 2026-11-03
+const VERSION = '1.6.1';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -49,7 +49,7 @@ function inspItems(i) {
 // ---------- ONE-TIME SETUP: run once from the Apps Script editor ----------
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  [['Equipment', EQ_H], ['Documents', DOC_H], ['Stickers', ST_H], ['Inspections', IN_H], ['Audit', AU_H], ['Contacts', CT_H], ['ReminderLog', RL_H], ['Sessions', SS_H], ['Users', USER_H]].forEach(p => {
+  [['Equipment', EQ_H], ['Documents', DOC_H], ['Stickers', ST_H], ['Inspections', IN_H], ['Audit', AU_H], ['Contacts', CT_H], ['ReminderLog', RL_H], ['Sessions', SS_H], ['Training', TRAIN_H], ['Warnings', WARN_H], ['Users', USER_H]].forEach(p => {
     const sh = ss.getSheetByName(p[0]) || ss.insertSheet(p[0]);
     if (sh.getLastRow() === 0) sh.appendRow(p[1]);
     sh.getRange(2, 1, sh.getMaxRows() - 1, p[1].length).setNumberFormat('@');
@@ -57,6 +57,7 @@ function setup() {
   const us = ss.getSheetByName('Users');
   if (us.getLastRow() === 1) us.appendRow([ADMIN_EMAIL, 'Iggy', 'HSSE', 'EcoOils', true, '', '']); // no PIN: set via "Forgot PIN" in the app
   DriveApp.getFolderById(DOC_FOLDER_ID); // fails here if this account cannot open the documents folder
+  installTrigger(); // daily 07:00 expiry reminders to the Contacts sheet recipients
 }
 
 // ---------- HTTP ----------
@@ -91,6 +92,13 @@ function doPost(e) {
         case 'listContacts':   return out(listContacts(user));
         case 'saveContact':    return out(saveContact(user, r.contact));
         case 'removeContact':  return out(removeContact(user, r.contactId));
+        case 'gradeTraining':  return out(gradeTraining(user, r.answers));
+        case 'saveTraining':   return out(saveTraining(user, r));
+        case 'listTraining':   return out(listTraining(user));
+        case 'getTraining':    return out(getTraining(user, r.trainId));
+        case 'listWarnings':   return out(listWarnings(user));
+        case 'issueWarning':   return out(issueWarning(user, r));
+        case 'withdrawWarning': return out(withdrawWarning(user, r.warnId, r.reason));
         case 'sendRemindersNow': needHSSE(user); return out({ ok: true, sent: sendReminders() });
       }
     } finally { lock.releaseLock(); }
@@ -497,8 +505,12 @@ function verifyPublic(id, tok) {
   const today = todayStr(), docs = readAll('Documents', DOC_H).filter(d => isTrue(d.Current));
   let f = fitness(it, docs, today);
   if (st.Status !== 'Active') f = { state: 'VOID', why: [st.Status === 'Void' ? (st.VoidReason || 'Sticker void') : 'Superseded sticker'] };
-  const rs = ruleStates(it, docs, today).map(r => ({ k: r.k, s: r.s }));
-  return { ok: true, v: { ID: it.ID, Category: it.Category, Type: it.Type, MakeModel: it.MakeModel, PlateSerial: it.PlateSerial, Company: it.Company, StickerNo: st.StickerNo, IssuedAt: st.IssuedAt, NextInspection: it.NextInspection, Fit: f.state, Why: f.why, Docs: rs } };
+  // Live, public-safe view: document status and validity dates only. No document numbers, file links, driver names or remarks.
+  const rs = ruleStates(it, docs, today).map(r => {
+    const d = r.docId ? docs.filter(x => x.DocID === r.docId)[0] : null, exp = d && d.Expiry ? d.Expiry : '';
+    return { k: r.k, s: r.s, exp: exp, days: exp ? daysBetween(today, exp) : null, pending: !!r.pendingId };
+  });
+  return { ok: true, v: { ID: it.ID, Category: it.Category, Type: it.Type, MakeModel: it.MakeModel, PlateSerial: it.PlateSerial, Company: it.Company, StickerNo: st.StickerNo, IssuedAt: st.IssuedAt, NextInspection: it.NextInspection, Fit: f.state, Why: f.why, Docs: rs, AsOf: iso() } };
 }
 
 // ---------- contacts (who receives reminders) ----------
@@ -590,4 +602,109 @@ function sendReminders() {
     if (has) byCo[co].forEach(x => addRow('ReminderLog', RL_H, { Key: x.key, SentAt: iso() }));
   });
   return mails;
+}
+
+
+// ---------- DRIVER TRAINING (defensive driving, No Flagman No Movement, Life-Saving Rules) ----------
+const TRAIN_H = ['TrainID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Score', 'Total', 'Passed', 'Lang', 'Signature', 'RecordedBy', 'ValidUntil'];
+const WARN_H = ['WarnID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Violation', 'Level', 'Details', 'IssuedBy', 'Status', 'WithdrawnReason', 'WithdrawnBy'];
+// Correct option index for each of the 10 quiz questions (the page holds the questions; the answer key stays here).
+const QUIZ_KEY = [1, 2, 3, 0, 2, 1, 1, 0, 2, 2];
+const TRAIN_PASS = 0.8;       // 80% to pass
+const TRAIN_VALID_DAYS = 365; // refresher interval
+const WARN_MONTHS_DAYS = 365; // warnings count towards the next level for this long
+const VIOLATIONS = ['nofm', 'spd', 'phone', 'belt', 'susp', 'lof', 'alc', 'jmp', 'other'];
+
+function tsheet(name, H) {
+  let sh = sheet(name);
+  if (!sh) { sh = SpreadsheetApp.getActiveSpreadsheet().insertSheet(name); sh.appendRow(H); sh.getRange(2, 1, sh.getMaxRows() - 1, H.length).setNumberFormat('@'); }
+  return sh;
+}
+function dkey(company, id, name) { return norm(company) + '|' + norm(id || name); }
+function gradeAnswers(a) {
+  a = Array.isArray(a) ? a : [];
+  let score = 0; QUIZ_KEY.forEach((k, i) => { if (Number(a[i]) === k) score++; });
+  return { score: score, total: QUIZ_KEY.length, passed: score / QUIZ_KEY.length >= TRAIN_PASS };
+}
+function gradeTraining(user, answers) { return Object.assign({ ok: true }, gradeAnswers(answers)); }
+function trainCompany(user, p) {
+  const co = user.role === 'IC' ? user.company : String(p.company || '').trim();
+  if (!co) throw new Error('Company is required');
+  return co;
+}
+function saveTraining(user, p) {
+  if (user.role !== 'HSSE' && user.role !== 'IC') throw new Error('Not allowed');
+  const name = String(p.driverName || '').trim();
+  if (!name) throw new Error('Driver name is required');
+  if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(String(p.signature || '')) || p.signature.length > 45000) throw new Error('Signature is required');
+  if (p.agreed !== true) throw new Error('The driver must accept the declaration');
+  const g = gradeAnswers(p.answers);
+  if (!g.passed) throw new Error('Quiz not passed (' + g.score + '/' + g.total + ')');
+  tsheet('Training', TRAIN_H);
+  const id = 'T-' + Utilities.getUuid().slice(0, 8), co = trainCompany(user, p);
+  addRow('Training', TRAIN_H, { TrainID: id, Time: iso(), Company: co, DriverName: name, DriverID: String(p.driverId || '').trim(), ItemID: p.itemId || '', Plate: p.plate || '', Score: g.score, Total: g.total, Passed: 'Yes', Lang: p.lang || '', Signature: p.signature, RecordedBy: user.email, ValidUntil: plusDays(TRAIN_VALID_DAYS) });
+  audit(user, 'training', id, name + ' ' + g.score + '/' + g.total);
+  return { ok: true, trainId: id };
+}
+function canSeeCo(user, co) { return user.role === 'HSSE' || user.role === 'Viewer' || (user.role === 'IC' && norm(co) === norm(user.company)); }
+function listTraining(user) {
+  tsheet('Training', TRAIN_H);
+  const rows = readAll('Training', TRAIN_H).filter(r => canSeeCo(user, r.Company)).map(r => { const o = strip(r); o.HasSig = !!o.Signature; delete o.Signature; return o; });
+  rows.sort((a, b) => a.Time < b.Time ? 1 : -1);
+  return { ok: true, training: rows };
+}
+function getTraining(user, id) {
+  tsheet('Training', TRAIN_H);
+  const r = readAll('Training', TRAIN_H).filter(x => x.TrainID === id)[0];
+  if (!r || !canSeeCo(user, r.Company)) throw new Error('Record not found');
+  return { ok: true, record: strip(r) };
+}
+
+// ---------- VIOLATION WARNINGS (SP1 / SP2 / SP3) ----------
+// SP1 written warning + re-training; SP2 driving suspended + re-training; SP3 removed from site pending HSSE Manager decision.
+function listWarnings(user) {
+  tsheet('Warnings', WARN_H); tsheet('Training', TRAIN_H);
+  const all = readAll('Warnings', WARN_H).filter(w => canSeeCo(user, w.Company));
+  const since = new Date(Date.now() - WARN_MONTHS_DAYS * 864e5).toISOString();
+  const tr = readAll('Training', TRAIN_H).filter(x => x.Passed === 'Yes');
+  const by = {};
+  all.forEach(w => {
+    const k = dkey(w.Company, w.DriverID, w.DriverName), d = by[k] || (by[k] = { Company: w.Company, DriverName: w.DriverName, DriverID: w.DriverID, Active: 0, Level: 0, Last: '' });
+    if (w.Status === 'Active' && w.Time >= since) { d.Active++; d.Level = Math.max(d.Level, Number(w.Level) || 0); if (w.Time > d.Last) d.Last = w.Time; }
+  });
+  const drivers = Object.keys(by).map(k => {
+    const d = by[k];
+    const lastT = tr.filter(x => dkey(x.Company, x.DriverID, x.DriverName) === k).map(x => x.Time).sort().pop() || '';
+    d.Retrain = d.Level > 0 && lastT < d.Last;
+    return d;
+  }).filter(d => d.Active > 0).sort((a, b) => b.Level - a.Level);
+  const warnings = all.map(strip).sort((a, b) => a.Time < b.Time ? 1 : -1);
+  return { ok: true, warnings: warnings, drivers: drivers };
+}
+function issueWarning(user, p) {
+  needHSSE(user);
+  tsheet('Warnings', WARN_H);
+  const co = String(p.company || '').trim(), name = String(p.driverName || '').trim();
+  if (!co || !name) throw new Error('Company and driver name are required');
+  if (VIOLATIONS.indexOf(p.violation) < 0) throw new Error('Choose the violation');
+  if (!String(p.details || '').trim()) throw new Error('Describe what happened');
+  const k = dkey(co, p.driverId, name), since = new Date(Date.now() - WARN_MONTHS_DAYS * 864e5).toISOString();
+  const prior = readAll('Warnings', WARN_H).filter(w => w.Status === 'Active' && w.Time >= since && dkey(w.Company, w.DriverID, w.DriverName) === k).length;
+  let level = Math.min(3, prior + 1);
+  if ([1, 2, 3].indexOf(Number(p.level)) >= 0) level = Number(p.level); // HSSE may set the level for a serious breach
+  const id = 'W-' + Utilities.getUuid().slice(0, 8);
+  addRow('Warnings', WARN_H, { WarnID: id, Time: iso(), Company: co, DriverName: name, DriverID: String(p.driverId || '').trim(), ItemID: p.itemId || '', Plate: String(p.plate || '').trim(), Violation: p.violation, Level: level, Details: String(p.details).trim(), IssuedBy: user.email, Status: 'Active' });
+  audit(user, 'warning', id, name + ' SP' + level + ' ' + p.violation);
+  return { ok: true, warnId: id, level: level };
+}
+function withdrawWarning(user, id, reason) {
+  needHSSE(user);
+  if (!String(reason || '').trim()) throw new Error('Give a reason for withdrawing');
+  tsheet('Warnings', WARN_H);
+  const w = readAll('Warnings', WARN_H).filter(x => x.WarnID === id)[0];
+  if (!w) throw new Error('Warning not found');
+  w.Status = 'Withdrawn'; w.WithdrawnReason = reason; w.WithdrawnBy = user.email;
+  writeRow('Warnings', WARN_H, w);
+  audit(user, 'warnWithdraw', id, reason);
+  return { ok: true };
 }
