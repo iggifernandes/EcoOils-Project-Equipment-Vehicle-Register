@@ -90,7 +90,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.6.1';
+const VERSION='1.6.3';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -279,40 +279,43 @@ function chkDoc(i){
   const V=i.Category==='Vehicle',I=T.id,E=T.en,bi=(k)=>`${esc(I[k]||k)}<br><span class="en">${esc(E[k]||k)}</span>`;
   const box='<span class="bx"></span>';
   const docRows=i.Rules.filter(r=>r.k!=='chk').map((r,n)=>`<tr><td class="c">${n+1}</td><td>${bi('d_'+r.k)}</td><td class="c">${box}</td><td class="c">${box}</td><td class="c">${box}</td><td></td><td></td></tr>`).join('');
-  const phys=i.Check.map((k,n)=>`<tr><td class="c">${n+1}</td><td>${bi('c_'+k)}</td><td class="c">${box}</td><td class="c">${box}</td><td class="c">${box}</td><td></td></tr>`).join('');
+  const phys=i.Check.map((k,n)=>`<tr><td class="c">${n+1}</td><td>${bi('c_'+k)}</td><td class="c">${box}</td><td class="c">${box}</td><td class="c">${box}</td><td colspan="2"></td></tr>`).join('');
   const P=[['Pengemudi / operator memiliki identitas dan lolos induksi HSSE EcoOils','Driver / operator ID held and EcoOils HSSE induction passed'],
    [V?'SIM sesuai golongan kendaraan dan masih berlaku':'SIO operator sesuai jenis alat dan masih berlaku','Licence matches vehicle class / operator SIO matches equipment type, and is valid'],
    ['Surat sehat (MCU) berlaku dan pengemudi / operator dinyatakan layak kerja','Medical fitness (MCU) valid; driver / operator fit for work'],
    [V?'Pelatihan defensive driving dan briefing aturan lalu lintas site (batas kecepatan, rute)':'Briefing operasi aman, tanda isyarat, zona eksklusi dan area kerja','Defensive driving and site traffic rules briefing (speed limits, routes) / safe operation, signals and exclusion zone briefing'],
    ['APD lengkap: helm, rompi reflektif, sepatu safety, sarung tangan, kacamata','PPE complete: helmet, high-vis vest, safety shoes, gloves, eye protection'],
    ['Pengemudi / operator bebas alkohol dan tidak dalam pengaruh obat (breath test)','Driver / operator alcohol-free and not under influence of drugs (breath test)']
-  ].map((r,n)=>`<tr><td class="c">${n+1}</td><td>${esc(r[0])}<br><span class="en">${esc(r[1])}</span></td><td class="c">${box}</td><td class="c">${box}</td><td class="c">${box}</td><td></td></tr>`).join('');
+  ].map((r,n)=>`<tr><td class="c">${n+1}</td><td>${esc(r[0])}<br><span class="en">${esc(r[1])}</span></td><td class="c">${box}</td><td class="c">${box}</td><td class="c">${box}</td><td colspan="2"></td></tr>`).join('');
   const basis=V?'UU No. 22/2009 (LLAJ); PP No. 55/2012 (Kendaraan); Permenhub No. 19/2021; UU No. 1/1970 (Keselamatan Kerja); PP No. 50/2012 (SMK3)':'UU No. 1/1970 (Keselamatan Kerja); PP No. 50/2012 (SMK3); Permenaker No. 8/2020 (K3 Pesawat Angkat dan Pesawat Angkut); Permenaker No. 9/2010 (Operator dan Petugas Pesawat Angkat dan Angkut); Permenaker No. 38/2016 (K3 Pesawat Tenaga dan Produksi)';
   const row=(a,b)=>`<td class="l">${a}</td><td>${esc(b||'')}</td>`;
   return `<!doctype html><html><head><meta charset="utf-8"><title>Pre-Mobilisation HSSE Inspection ${esc(i.ID)}</title><link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>@page{size:A4;margin:10mm}*{box-sizing:border-box}body{margin:0;font-family:Jost,Arial,sans-serif;color:#222;font-size:9.5pt}
-.h{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #FBCE07;padding-bottom:6px;margin-bottom:8px}
-h1{font-weight:300;letter-spacing:.14em;text-transform:uppercase;font-size:14pt;margin:0}.sub{font-size:8.5pt;color:#555}
-h2{font-size:9.5pt;letter-spacing:.1em;text-transform:uppercase;background:#404040;color:#fff;margin:10px 0 0;padding:3px 6px}
-table{width:100%;border-collapse:collapse}td,th{border:1px solid #999;padding:3px 5px;vertical-align:top}th{background:#eee;font-weight:500;font-size:8.5pt}
-td.l{background:#f3f3f3;width:17%;font-weight:500}.c{text-align:center;width:9%}.en{color:#666;font-size:8pt}
-.bx{display:inline-block;width:11px;height:11px;border:1px solid #333}.note{font-size:8pt;color:#444;margin-top:4px}
-.sig td{height:60px;width:25%}.fx{page-break-inside:avoid}.dis{border:1px solid #DD1D21;color:#8a1214;padding:5px 7px;font-size:8.5pt;margin-top:8px}
-</style></head><body>
+<style>@page{size:A4;margin:10mm}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:Jost,Arial,sans-serif;color:#222;font-size:8.8pt;line-height:1.15;width:190mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.h{display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;border-bottom:2px solid #FBCE07;padding-bottom:5px;margin-bottom:6px}.h>div:last-child{text-align:right;min-width:0}
+h1{font-weight:300;letter-spacing:.08em;text-transform:uppercase;font-size:12.5pt;margin:0 0 2px;line-height:1.15}.sub{font-size:8pt;color:#555}
+h2{font-size:9pt;letter-spacing:.08em;text-transform:uppercase;background:#404040;color:#fff;margin:5px 0 0;padding:2px 6px;break-after:avoid;page-break-after:avoid}
+table{width:100%;border-collapse:collapse;table-layout:fixed}td,th{border:1px solid #888;padding:1.2px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere}th{background:#eee;font-weight:500;font-size:8pt;line-height:1.15}
+thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}
+td.l{background:#f3f3f3;font-weight:500;font-size:8.5pt}.c{text-align:center}.en{color:#666;font-size:7.3pt;line-height:1.1}
+.bx{display:inline-block;width:10px;height:10px;border:1px solid #333;vertical-align:middle}.note{font-size:7.5pt;color:#444;margin-top:3px}
+.sig td{height:17mm;vertical-align:top;font-size:8pt}.fx{break-inside:avoid;page-break-inside:avoid}.dis{border:1px solid #DD1D21;color:#8a1214;padding:4px 6px;font-size:8pt;margin-top:6px}
+.dec td{width:33.33%;vertical-align:top;font-size:8.5pt}
+.cp td,.cp th{padding:.4px 4px}.cp .bx{width:9px;height:9px}.cp h2{margin-top:4px}
+</style></head><body class="${i.Rules.length+i.Check.length>23?'cp':''}">
 <div class="h"><div>${lockup(120)}</div><div style="text-align:right"><h1>Checklist Inspeksi HSSE Pra-Mobilisasi</h1><div class="sub">Pre-Mobilisation HSSE Inspection Checklist | ${V?'Kendaraan / Vehicle':'Alat Berat / Heavy Equipment'} | Sei Mangkei</div><div class="sub">No. Form / Form No.: ______________ &nbsp; Rev: ____</div></div></div>
-<table><tr>${row('ID',i.ID)}${row('Kontraktor / Contractor',i.Company)}</tr>
+<table><colgroup><col style="width:17%"><col style="width:33%"><col style="width:17%"><col style="width:33%"></colgroup><tr>${row('ID',i.ID)}${row('Kontraktor / Contractor',i.Company)}</tr>
 <tr>${row('Jenis / Type',i.Type)}${row('Merk / Model',i.MakeModel)}</tr>
 <tr>${row(V?'No. Polisi / Plate':'No. Seri / Serial',i.PlateSerial)}${row('Pengemudi / Operator',i.OperatorName)}</tr>
 <tr>${row('Tanggal / Date','')}${row('Lokasi / Location','')}</tr></table>
 <div class="note">Isi: &#10003; = Ya / Yes &nbsp; &#10007; = Tidak / No &nbsp; N/A = Tidak berlaku / Not applicable. Setiap ketidaksesuaian wajib ditutup sebelum masuk site. / Every non-conformity must be closed before site entry.</div>
 <h2>A. Verifikasi Dokumen / Document Verification</h2>
-<table><tr><th>No</th><th>Dokumen / Document</th><th>Ada<br>Yes</th><th>Tdk<br>No</th><th>N/A</th><th>No. Dokumen / Number</th><th>Berlaku s/d / Valid until</th></tr>${docRows}</table>
+<table><colgroup><col style="width:5%"><col style="width:41%"><col style="width:6.5%"><col style="width:6.5%"><col style="width:6.5%"><col style="width:17%"><col style="width:17.5%"></colgroup><thead><tr><th>No</th><th>Dokumen / Document</th><th>Ada<br>Yes</th><th>Tdk<br>No</th><th>N/A</th><th>No. Dokumen / Number</th><th>Berlaku s/d / Valid until</th></tr></thead><tbody>${docRows}</tbody></table>
 <h2>B. Pemeriksaan Fisik / Physical Inspection</h2>
-<table><tr><th>No</th><th>Item pemeriksaan / Item</th><th>Baik<br>OK</th><th>Tdk<br>Fail</th><th>N/A</th><th>Catatan / Remarks</th></tr>${phys}</table>
-<h2>C. Pengemudi / Operator &amp; Kompetensi / Competence</h2>
-<table><tr><th>No</th><th>Item</th><th>Ya<br>Yes</th><th>Tdk<br>No</th><th>N/A</th><th>Catatan / Remarks</th></tr>${P}</table>
+<table><colgroup><col style="width:5%"><col style="width:41%"><col style="width:6.5%"><col style="width:6.5%"><col style="width:6.5%"><col style="width:17%"><col style="width:17.5%"></colgroup><thead><tr><th>No</th><th>Item pemeriksaan / Item</th><th>Baik<br>OK</th><th>Tdk<br>Fail</th><th>N/A</th><th colspan="2">Catatan / Remarks</th></tr></thead><tbody>${phys}</tbody></table>
+<div class="fx"><h2>C. Pengemudi / Operator &amp; Kompetensi / Competence</h2>
+<table><colgroup><col style="width:5%"><col style="width:41%"><col style="width:6.5%"><col style="width:6.5%"><col style="width:6.5%"><col style="width:17%"><col style="width:17.5%"></colgroup><thead><tr><th>No</th><th>Item</th><th>Ya<br>Yes</th><th>Tdk<br>No</th><th>N/A</th><th colspan="2">Catatan / Remarks</th></tr></thead><tbody>${P}</tbody></table></div>
 <div class="fx"><h2>D. Keputusan / Decision</h2>
-<table><tr><td>${box} <b>LAYAK MOBILISASI</b> / Approved for mobilisation</td><td>${box} <b>LAYAK DENGAN CATATAN</b> / Approved with actions (close-out date: ____________)</td><td>${box} <b>TIDAK LAYAK</b> / Rejected &mdash; re-inspection required</td></tr>
+<table class="dec"><tr><td>${box} <b>LAYAK MOBILISASI</b> / Approved for mobilisation</td><td>${box} <b>LAYAK DENGAN CATATAN</b> / Approved with actions (close-out date: ____________)</td><td>${box} <b>TIDAK LAYAK</b> / Rejected &mdash; re-inspection required</td></tr>
 <tr><td colspan="3" style="height:48px">Catatan / Remarks:</td></tr></table>
 <table class="sig"><tr><th>Pemeriksa HSE Kontraktor<br>Contractor HSE</th><th>Pengemudi / Operator<br>Driver / Operator</th><th>Inspektur HSSE EcoOils<br>EcoOils HSSE Inspector</th><th>Manajer Kontraktor<br>Contractor Manager</th></tr>
 <tr><td>Nama / Name:<br>Tgl / Date:</td><td>Nama / Name:<br>Tgl / Date:</td><td>Nama / Name:<br>Tgl / Date:</td><td>Nama / Name:<br>Tgl / Date:</td></tr></table>
