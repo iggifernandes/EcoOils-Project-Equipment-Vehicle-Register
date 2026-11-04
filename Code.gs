@@ -1,5 +1,5 @@
-// VERSION 1.3.1 | Equipment & Vehicle Register backend | 2026-11-03
-const VERSION = '1.3.1';
+// VERSION 1.3.2 | Equipment & Vehicle Register backend | 2026-11-03
+const VERSION = '1.3.2';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -68,7 +68,7 @@ function doPost(e) {
     switch (r.action) {
       case 'requestReset': return out(requestReset(r.email));
       case 'setPin':       return out(setPin(r.email, r.code, r.pin));
-      case 'login':        return out(login(r.email, r.pin));
+      case 'login':        return out(login(r.email, r.pin, r.keep));
       case 'verify':       return out(verifyPublic(r.id, r.t));
       case 'logout':       return out(logout(r.token));
     }
@@ -156,7 +156,7 @@ function setPin(email, code, pin) {
   dropSessions(s => norm(s.Email) === norm(email)); // a PIN reset signs the user out everywhere
   return { ok: true };
 }
-function login(email, pin) {
+function login(email, pin, keep) {
   const cache = CacheService.getScriptCache(), fk = 'fail_' + norm(email);
   if (Number(cache.get(fk) || 0) >= 5) throw new Error('Too many attempts. Try again in 15 minutes or reset your PIN.');
   const u = findUser(email);
@@ -166,7 +166,7 @@ function login(email, pin) {
   }
   cache.remove(fk);
   const user = { email: u.vals[0], name: u.vals[1], role: effRole(u.vals[2], u.vals[3]), company: u.vals[3] };
-  return { ok: true, token: newSession(u.vals[0]), user: user, days: SESSION_DAYS };
+  return { ok: true, token: newSession(u.vals[0], keep === false ? 1 : SESSION_DAYS), user: user, days: keep === false ? 1 : SESSION_DAYS };
 }
 // ---------- sessions (stay signed in for SESSION_DAYS; only a hash of the token is stored) ----------
 function tokenHash(t) { return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'tok:' + t)); }
@@ -183,11 +183,11 @@ function dropSessions(pred) { // delete matching rows, bottom first
   const sh = sessSheet(), rows = readAll('Sessions', SS_H).filter(pred).map(r => r._row).sort((a, b) => b - a);
   rows.forEach(r => sh.deleteRow(r));
 }
-function newSession(email) {
+function newSession(email, days) {
   const sh = sessSheet(), now = iso();
   dropSessions(s => s.Expires < now); // tidy expired sessions
   const token = Utilities.getUuid() + Utilities.getUuid();
-  sh.appendRow([tokenHash(token), email, new Date(Date.now() + SESSION_DAYS * 864e5).toISOString()]);
+  sh.appendRow([tokenHash(token), email, new Date(Date.now() + (days || SESSION_DAYS) * 864e5).toISOString()]);
   return token;
 }
 function auth(token) {
