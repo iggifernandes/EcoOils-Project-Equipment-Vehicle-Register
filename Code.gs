@@ -1,5 +1,5 @@
-// VERSION 1.3.2 | Equipment & Vehicle Register backend | 2026-11-03
-const VERSION = '1.3.2';
+// VERSION 1.4.0 | Equipment & Vehicle Register backend | 2026-11-03
+const VERSION = '1.4.0';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -78,6 +78,7 @@ function doPost(e) {
       switch (r.action) {
         case 'list':           return out(listAll(user));
         case 'saveItem':       return out(saveItem(user, r.item));
+        case 'deleteItem':     return out(deleteItem(user, r.itemId, r.pin, r.reason));
         case 'submit':         return out(submitItem(user, r.itemId));
         case 'uploadDoc':      return out(uploadDoc(user, r));
         case 'getFile':        return out(getFile(user, r.docId));
@@ -429,6 +430,32 @@ function voidItem(user, id, reason) {
     if (s.ItemID === id && s.Status === 'Active') { s.Status = 'Void'; s.VoidReason = reason; s.VoidedBy = user.email; s.VoidedAt = iso(); writeRow('Stickers', ST_H, s); }
   });
   audit(user, 'void', id, reason);
+  return { ok: true };
+}
+
+// Delete an entry: HSSE only, and the PIN must be typed again. Rows go; Drive files go to the Drive bin (recoverable ~30 days).
+function deleteItem(user, id, pin, reason) {
+  needHSSE(user);
+  const cache = CacheService.getScriptCache(), fk = 'fail_' + norm(user.email);
+  if (Number(cache.get(fk) || 0) >= 5) throw new Error('Too many wrong PINs. Try again in 15 minutes.');
+  const u = findUser(user.email);
+  if (!u || !u.vals[5] || hash(u.vals[5], String(pin || '')) !== u.vals[6]) {
+    cache.put(fk, String(Number(cache.get(fk) || 0) + 1), 900);
+    throw new Error('Wrong PIN. The entry was not deleted.');
+  }
+  cache.remove(fk);
+  if (!String(reason || '').trim()) throw new Error('Give a reason for deleting');
+  const it = getItem(id);
+  const rowsOf = (name, H, pred) => readAll(name, H).filter(pred).map(r => r._row).sort((a, b) => b - a);
+  rowsOf('Documents', DOC_H, d => d.ItemID === id).forEach(r => sheet('Documents').deleteRow(r));
+  rowsOf('Stickers', ST_H, s => s.ItemID === id).forEach(r => sheet('Stickers').deleteRow(r)); // QR link stops working
+  sheet('Equipment').deleteRow(it._row);
+  try {
+    const root = DriveApp.getFolderById(DOC_FOLDER_ID), co = root.getFoldersByName(String(it.Company || 'Other'));
+    if (co.hasNext()) { const cats = co.next().getFolders(); while (cats.hasNext()) { const h = cats.next().getFoldersByName(id); while (h.hasNext()) h.next().setTrashed(true); } }
+    const old = root.getFoldersByName(id); while (old.hasNext()) old.next().setTrashed(true); // entries uploaded before v1.3.0
+  } catch (e) { /* files stay in Drive if the folder cannot be reached */ }
+  audit(user, 'delete', id, it.PlateSerial + ' | ' + reason);
   return { ok: true };
 }
 
