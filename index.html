@@ -90,7 +90,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.6.4';
+const VERSION='1.6.5';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -186,15 +186,16 @@ function render(){applyLang();const nav=$('#nav');
 async function go(k){tab=k;note='';try{if(k==='contacts')contacts=(await api('listContacts')).contacts;if(k==='train'){if(!tr.co&&user.role==='IC')tr.co=user.company;trainRows=(await api('listTraining')).training;}if(k==='warn')warnData=await api('listWarnings');}catch(e){errNote(e);}render();}
 
 // ---------- auth ----------
-function renderAuth(){const f=authMode;
-  $('#app').innerHTML=`<div class="card login">${note?msg(note.replace(/^!/,''),note.startsWith('!')):''}
-  <label>${t('email')}</label><input id="a_e" type="email" autocomplete="username">
-  ${f==='login'?`<div style="height:10px"></div><label>${t('pin')}</label><input id="a_p" type="password" inputmode="numeric" autocomplete="current-password"><label style="display:flex;gap:8px;align-items:center;margin-top:12px;text-transform:none;letter-spacing:0"><input type="checkbox" id="a_k" ${localStorage.getItem('evr_keep')==='0'?'':'checked'} style="width:auto"> ${t('keep')}</label><div class="row"><button class="btn" onclick="doLogin()">${t('signin')}</button><button class="btn sec" onclick="authMode='reset';note='';render()">${t('forgot')}</button></div>`:''}
-  ${f==='reset'?`<div class="row"><button class="btn" onclick="doReset()">${t('sendcode')}</button><button class="btn sec" onclick="authMode='login';note='';render()">${t('back')}</button></div>`:''}
-  ${f==='setpin'?`<div style="height:10px"></div><label>${t('code')}</label><input id="a_c" inputmode="numeric"><div style="height:10px"></div><label>${t('newpin')}</label><input id="a_p" type="password" inputmode="numeric" autocomplete="new-password"><div class="row"><button class="btn" onclick="doSetPin()">${t('savepin')}</button><button class="btn sec" onclick="authMode='login';note='';render()">${t('back')}</button></div>`:''}</div>`;}
+function renderAuth(){const f=authMode,em=($('#a_e')&&$('#a_e').value)||'';
+  $('#app').innerHTML=`<div class="card login"><form id="authf" method="post" action="#" autocomplete="on" onsubmit="authSubmit(event)">${note?msg(note.replace(/^!/,''),note.startsWith('!')):''}
+  <label>${t('email')}</label><input id="a_e" name="username" type="email" autocomplete="username" value="${esc(em)}">
+  ${f==='login'?`<div style="height:10px"></div><label>${t('pin')}</label><input id="a_p" name="password" type="password" inputmode="numeric" autocomplete="current-password"><label style="display:flex;gap:8px;align-items:center;margin-top:12px;text-transform:none;letter-spacing:0"><input type="checkbox" id="a_k" ${localStorage.getItem('evr_keep')==='0'?'':'checked'} style="width:auto"> ${t('keep')}</label><div class="row"><button class="btn" type="submit">${t('signin')}</button><button class="btn sec" type="button" onclick="authMode='reset';note='';render()">${t('forgot')}</button></div>`:''}
+  ${f==='reset'?`<div class="row"><button class="btn" type="submit">${t('sendcode')}</button><button class="btn sec" type="button" onclick="authMode='login';note='';render()">${t('back')}</button></div>`:''}
+  ${f==='setpin'?`<div style="height:10px"></div><label>${t('code')}</label><input id="a_c" name="otp" inputmode="numeric" autocomplete="one-time-code"><div style="height:10px"></div><label>${t('newpin')}</label><input id="a_p" name="new-password" type="password" inputmode="numeric" autocomplete="new-password"><div class="row"><button class="btn" type="submit">${t('savepin')}</button><button class="btn sec" type="button" onclick="authMode='login';note='';render()">${t('back')}</button></div>`:''}</form></div>`;}
+function authSubmit(e){e.preventDefault();({login:doLogin,reset:doReset,setpin:doSetPin})[authMode]();}
 async function doLogin(){try{const keep=$('#a_k').checked;const r=await api('login',{email:$('#a_e').value,pin:$('#a_p').value,keep});token=r.token;user=r.user;try{localStorage.removeItem('evr_tok');sessionStorage.removeItem('evr_tok');sessionStorage.removeItem('evr_tok');(keep?localStorage:sessionStorage).setItem('evr_tok',token);localStorage.setItem('evr_keep',keep?'1':'0');}catch(_){}await load();}catch(e){errNote(e);render();}}
 async function doReset(){try{const em=$('#a_e').value;await api('requestReset',{email:em});authMode='setpin';note=t('codesent');render();$('#a_e').value=em;}catch(e){errNote(e);render();}}
-async function doSetPin(){try{await api('setPin',{email:$('#a_e').value,code:$('#a_c').value,pin:$('#a_p').value});authMode='login';note=t('pinset');render();}catch(e){errNote(e);render();}}
+async function doSetPin(){try{await api('setPin',{email:$('#a_e').value,code:$('#a_c').value,pin:$('#a_p').value});const em=$('#a_e').value;authMode='login';note=t('pinset');render();$('#a_e').value=em;if($('#a_p'))$('#a_p').focus();}catch(e){const em=$('#a_e').value;errNote(e);render();$('#a_e').value=em;}}
 async function signout(){try{if(token)await api('logout');}catch(e){}token='';user=null;localStorage.removeItem('evr_tok');sessionStorage.removeItem('evr_tok');render();}
 async function load(){try{const r=await api('list');
   if(!Array.isArray(r.items)||!Array.isArray(r.docs)||!Array.isArray(r.stickers)||r.items.some(i=>!Array.isArray(i.Rules))){user=r.user||user;items=[];docs=[];stickers=[];note='!The backend (Code.gs) is older than this page. In Apps Script paste the latest Code.gs, run setup(), then Deploy > Manage deployments > Edit > New version > Deploy.';render();return;}
