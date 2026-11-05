@@ -1,5 +1,5 @@
-// VERSION 1.6.4 | Equipment & Vehicle Register backend | 2026-11-03
-const VERSION = '1.6.4';
+// VERSION 1.6.6 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.6.6';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -17,7 +17,7 @@ const REMIND_AT = [30, 14, 7, 3, 0];   // days before expiry when a reminder is 
 const REMIND_LONG = [60, 30, 14, 7, 3, 0]; // documents that take weeks to renew get an earlier first reminder
 const LONG_LEAD = ['silo', 'rep', 'sio', 'kir', 'sim', 'stnk']; // SILO, PJK3 report, operator SIO, KIR, SIM, STNK
 const EXPIRED_EVERY_DAYS = 3;          // after expiry the reminder repeats every 3 days
-const MAIL_NAME = 'EcoOils HSSE | Equipment & Vehicle Register';
+const MAIL_NAME = 'EcoOils HSSE | Heavy Equipment & Vehicle Register';
 const MAIL_FROM = ADMIN_EMAIL;         // shown as the sender when it is a verified Gmail "Send mail as" alias, otherwise used as Reply-To
 const USER_H = ['Email','Name','Role','Company','Active','Salt','Hash'];
 
@@ -66,7 +66,7 @@ function setup() {
 }
 
 // ---------- HTTP ----------
-function doGet() { return out({ ok: true, service: 'Equipment & Vehicle Register', version: VERSION }); }
+function doGet() { return out({ ok: true, service: 'Heavy Equipment & Vehicle Register', version: VERSION }); }
 
 function doPost(e) {
   try {
@@ -169,7 +169,7 @@ function requestReset(email) {
   if (u) { // same response whether or not the email exists
     const code = String(Math.floor(100000 + Math.random() * 900000));
     CacheService.getScriptCache().put('reset_' + norm(email), code, 900);
-    sendMail(email, 'Equipment & Vehicle Register - PIN reset code',
+    sendMail(email, 'Heavy Equipment & Vehicle Register - PIN reset code',
       'Your one-time code is ' + code + '. It is valid for 15 minutes.\nIf you did not request this, ignore this email.');
   }
   return { ok: true };
@@ -623,7 +623,7 @@ function sendReminders() {
     if (!rec.length) return; // nobody to tell: do not log, so it is retried once contacts exist
     const lines = byCo[co].sort((a, b) => a.days - b.days).map(x =>
       '- ' + x.item.ID + ' | ' + x.item.PlateSerial + ' (' + x.item.Type + ') | ' + x.what + ' | ' + x.date + ' | ' + (x.days < 0 ? 'EXPIRED ' + (-x.days) + ' day(s) ago' : x.days === 0 ? 'expires TODAY' : 'expires in ' + x.days + ' day(s)'));
-    const body = 'Equipment & Vehicle Register reminder for ' + co + '.\n\n' + lines.join('\n') +
+    const body = 'Heavy Equipment & Vehicle Register reminder for ' + co + '.\n\n' + lines.join('\n') +
       '\n\nExpired items are suspended at the gate (the sticker QR will show SUSPENDED). Please upload the renewed document in the register, or request re-inspection for the approval, so HSSE can verify it.' +
       (to.length ? '' : '\n\n(No contacts are registered for ' + co + ' yet: add them in the Contacts tab.)');
     sendMail(rec.join(','), '[EVR] ' + byCo[co].length + ' expiry reminder(s) - ' + co, body);
