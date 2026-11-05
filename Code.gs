@@ -1,5 +1,5 @@
-// VERSION 1.6.2 | Equipment & Vehicle Register backend | 2026-11-03
-const VERSION = '1.6.2';
+// VERSION 1.6.4 | Equipment & Vehicle Register backend | 2026-11-03
+const VERSION = '1.6.4';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -84,6 +84,7 @@ function doPost(e) {
       switch (r.action) {
         case 'list':           return out(listAll(user));
         case 'saveItem':       return out(saveItem(user, r.item));
+        case 'setLocation':    return out(setLocation(user, r.itemId, r.location));
         case 'deleteItem':     return out(deleteItem(user, r.itemId, r.pin, r.reason));
         case 'submit':         return out(submitItem(user, r.itemId));
         case 'uploadDoc':      return out(uploadDoc(user, r));
@@ -317,7 +318,7 @@ function saveItem(user, item) {
     audit(user, 'saveItem', cur.ID, '');
     return { ok: true, id: cur.ID };
   }
-  const o = { Status: 'Draft', LocationStatus: 'Off-site', PlateSerial: plate, UpdatedAt: now };
+  const o = { Status: 'Draft', LocationStatus: LOCATIONS.indexOf(item.LocationStatus) >= 0 ? item.LocationStatus : 'Off-site', PlateSerial: plate, UpdatedAt: now };
   F.forEach(f => o[f] = item[f] || '');
   o.Company = user.role === 'IC' ? user.company : (item.Company || '');
   if (!o.Company) throw new Error('Company is required');
@@ -325,6 +326,20 @@ function saveItem(user, item) {
   addRow('Equipment', EQ_H, o);
   audit(user, 'create', o.ID, plate);
   return { ok: true, id: o.ID };
+}
+
+const LOCATIONS = ['On-site', 'Off-site', 'Under repair', 'Removed'];
+// Location is operational, so HSSE and the entry's own contractor can change it at any status.
+function setLocation(user, id, loc) {
+  if (LOCATIONS.indexOf(loc) < 0) throw new Error('Invalid location');
+  const cur = getItem(id);
+  if (user.role === 'Viewer' || !canWork(user, cur)) throw new Error('Not allowed');
+  if (cur.LocationStatus === loc) return { ok: true };
+  const from = cur.LocationStatus;
+  cur.LocationStatus = loc; cur.UpdatedAt = iso();
+  writeRow('Equipment', EQ_H, cur);
+  audit(user, 'location', id, from + ' -> ' + loc);
+  return { ok: true };
 }
 
 function submitItem(user, id) {

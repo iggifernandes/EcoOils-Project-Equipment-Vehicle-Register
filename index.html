@@ -90,7 +90,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.6.3';
+const VERSION='1.6.4';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -252,7 +252,7 @@ function identHtml(i){i=i||{};const V=(i.Category||'Vehicle')==='Vehicle';
   return `<div class="grid"><div><label>${t('category')}</label><select data-f="Category" onchange="recat(this)"><option value="Vehicle" ${V?'selected':''}>${t('vehicle')}</option><option value="Heavy Equipment" ${V?'':'selected'}>${t('heavy')}</option></select></div>
   ${fld('Type','type',i.Type||types[0][0],'',types)}${fld('MakeModel','make',i.MakeModel)}${fld('PlateSerial','plate',i.PlateSerial)}
   ${user.role==='IC'?'':fld('Company','company',i.Company||COS[0],'',COS.map(c=>[c,c]))}
-  ${isHSSE()&&i.ID?fld('LocationStatus','location',i.LocationStatus||'Off-site','',LOCS.map(c=>[c,t(c)])):''}
+  ${!i.ID?fld('LocationStatus','location',i.LocationStatus||'Off-site','',LOCS.map(c=>[c,t(c)])):''}
   ${fld('OperatorName','operator',i.OperatorName)}${V?fld('OperatorLicenceClass','simcls',i.OperatorLicenceClass||'B1','',SIMCLS.map(c=>[c,c])):fld('OperatorLicenceClass','siocls',i.OperatorLicenceClass)}
   ${fld('Remarks','remarks',i.Remarks,'ta')}</div>`;}
 function recat(sel){const root=sel.closest('[data-root]');const o=collect(root);o.Type='';root.innerHTML=identHtml(o);}
@@ -263,6 +263,7 @@ function openItem(id){cur=id;upk='';$('#dlg').dataset.msg='';drawItem();if(!dlg.
 function drawItem(m,e){const i=items.find(x=>x.ID===cur);if(!i)return;$('#dt').textContent=i.ID+' | '+i.PlateSerial;
   const editable=canWork()&&(isHSSE()||['Draft','Rejected','Void'].includes(i.Status));
   $('#db').innerHTML=(m?msg(m,e):'')+`<div class="row" style="margin-top:0">${spill(i)}${i.Status==='Approved'?`<span class="hint">${t('nextinsp')}: ${esc(i.NextInspection)}</span>`:''}</div>
+  ${canWork()?`<div class="row" style="align-items:center"><label style="margin:0">${t('location')}</label><select id="locsel" onchange="setLoc(this.value)">${LOCS.map(c=>`<option value="${c}" ${i.LocationStatus===c?'selected':''}>${t(c)}</option>`).join('')}</select></div>`:''}
   ${i.FitWhy&&i.FitWhy.length&&i.Fit!=='FIT'?`<div class="msg err">${i.FitWhy.map(esc).join('<br>')}</div>`:''}${i.DecisionNote&&['Rejected','Void'].includes(i.Status)?`<div class="msg err">${esc(i.DecisionNote)}</div>`:''}
   <h3>${t('identity')}</h3><div data-root id="df">${identHtml(i)}</div>${editable?`<div class="row"><button class="btn sec" onclick="saveItem()">${t('save')}</button></div>`:''}
   <h3>${t('docs')}</h3>${uploadBar(i)}<div class="hint" style="margin-bottom:6px">${t('docnote')}</div><div class="tw"><table><thead><tr><th>${t('docs')}</th><th>${t('status')}</th><th>${t('number')}</th><th>${t('expiry')}</th><th></th></tr></thead><tbody>${i.Rules.map(r=>docRow(i,r)).join('')}</tbody></table></div>
@@ -271,6 +272,7 @@ function drawItem(m,e){const i=items.find(x=>x.ID===cur);if(!i)return;$('#dt').t
   ${isHSSE()&&['Submitted','Approved'].includes(i.Status)?inspHtml(i):''}${isHSSE()&&i.Status==='Approved'?stickerHtmlPanel(i):''}
   ${isHSSE()?`<h3>${t('delh')}</h3><div id="delbox"><div class="row" style="margin-top:0"><button class="btn red" onclick="showDel()">${t('delb')}</button></div></div>`:''}`;
   if(!editable)$('#df').querySelectorAll('#df input,#df select,#df textarea').forEach(x=>x.disabled=true);if($('#upk'))syncUp();}
+async function setLoc(v){try{await api('setLocation',{itemId:cur,location:v});const i=items.find(x=>x.ID===cur);if(i)i.LocationStatus=v;await load();drawItem(t('saved'));}catch(e){drawItem(e.message,1);}}
 function showDel(){$('#delbox').innerHTML=`<div class="hint" style="margin-bottom:8px">${t('delwarn')}</div><div class="grid"><div><label>${t('delreason')}</label><input id="delr"></div><div><label>${t('pin')}</label><input id="delp" type="password" inputmode="numeric" autocomplete="current-password"></div></div><div class="row"><button class="btn red" onclick="doDel()">${t('delc')}</button><button class="btn sec" onclick="drawItem()">${t('cancel')}</button></div>`;$('#delp').focus();}
 async function doDel(){try{await api('deleteItem',{itemId:cur,pin:$('#delp').value,reason:$('#delr').value.trim()});dlg.close();note=t('deleted');await load();}catch(e){drawItem(e.message,1);}}
 
