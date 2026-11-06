@@ -1,5 +1,5 @@
-// VERSION 1.6.14 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.6.14';
+// VERSION 1.6.15 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.6.15';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -33,6 +33,7 @@ const REINSPECT_DAYS = 183; // periodic re-inspection interval (about 6 months):
 // Permenaker 8/2020, 9/2010 (lifting equipment and operators), 38/2016 (generators, compressors).
 const DOCL = { stnk: 'STNK', pkb: 'PKB tax / SWDKLLJ proof', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
+const OPTIONAL_DOCS = ['own'];
 function docRules(i) {
   const R = [];
   if (i.Category === 'Vehicle') {
@@ -43,7 +44,8 @@ function docRules(i) {
     R.push(['silo', 1, 1], ['rep', 1, 1], ['sio', 1, 1], ['mcu', 1, 0], ['ins', 1, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (LIFT.indexOf(i.Type) >= 0) R.push(['rig', 1, 1]);
   }
-  return R.map(r => ({ k: r[0], exp: r[1], num: !!r[2] }));
+  // Optional documents (not required for approval or fitness): commercial arrangements between the IC and its vendor.
+  return R.map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: OPTIONAL_DOCS.indexOf(r[0]) >= 0 }));
 }
 
 function inspItems(i) {
@@ -254,7 +256,7 @@ function ruleStates(item, allDocs, today) {
   return docRules(item).map(r => {
     const cur = allDocs.filter(d => d.ItemID === item.ID && d.DocType === r.k && isTrue(d.Current))
       .sort((a, b) => a.UploadedAt < b.UploadedAt ? 1 : -1);
-    const o = { k: r.k, exp: r.exp, num: r.num, s: 'missing', docId: '', pendingId: '' };
+    const o = { k: r.k, exp: r.exp, num: r.num, opt: r.opt, s: 'missing', docId: '', pendingId: '' };
     if (!cur.length) return o;
     const good = cur.filter(d => d.Verified === 'Yes' && !(d.Expiry && d.Expiry < today))[0];
     const pend = cur.filter(d => d.Verified === '')[0];
@@ -269,7 +271,7 @@ function fitness(item, allDocs, today) {
   if (item.Status === 'Void') return { state: 'VOID', why: [item.DecisionNote || 'Inspection void: re-inspection required'] };
   if (item.Status !== 'Approved') return { state: 'NOT APPROVED', why: [item.Status] };
   const why = [];
-  ruleStates(item, allDocs, today).forEach(r => { if (r.s !== 'ok') why.push((DOCL[r.k] || r.k) + ': ' + r.s); });
+  ruleStates(item, allDocs, today).forEach(r => { if (!r.opt && r.s !== 'ok') why.push((DOCL[r.k] || r.k) + ': ' + r.s); });
   if (item.NextInspection && item.NextInspection < today) why.push('Re-inspection overdue (' + item.NextInspection + ')');
   return { state: why.length ? 'SUSPENDED' : 'FIT', why: why };
 }
@@ -348,7 +350,7 @@ function submitItem(user, id) {
   if (!canWork(user, it)) throw new Error('Not allowed');
   if (['Draft', 'Rejected', 'Void'].indexOf(it.Status) < 0) throw new Error('Already submitted');
   const docs = readAll('Documents', DOC_H).filter(d => isTrue(d.Current));
-  const miss = ruleStates(it, docs, todayStr()).filter(r => r.s === 'missing').map(r => DOCL[r.k] || r.k);
+  const miss = ruleStates(it, docs, todayStr()).filter(r => !r.opt && r.s === 'missing').map(r => DOCL[r.k] || r.k);
   if (miss.length) throw new Error('Upload all required documents first. Missing: ' + miss.join(', '));
   it.Status = 'Submitted'; it.SubmittedBy = user.email; it.SubmittedAt = iso(); it.DecisionNote = ''; it.UpdatedAt = iso();
   writeRow('Equipment', EQ_H, it);
@@ -428,7 +430,7 @@ function approve(user, id, checklist, notes) {
   if (['Submitted', 'Approved'].indexOf(it.Status) < 0) throw new Error('Entry is not submitted for inspection');
   if (it.Status === 'Submitted' && it.SubmittedBy === user.email) throw new Error('A different HSSE user must approve an entry you submitted');
   const docs = readAll('Documents', DOC_H).filter(d => isTrue(d.Current));
-  const rs = ruleStates(it, docs, today), bad = rs.filter(r => r.s !== 'ok');
+  const rs = ruleStates(it, docs, today), bad = rs.filter(r => !r.opt && r.s !== 'ok');
   if (bad.length) throw new Error('Cannot approve. ' + bad.map(r => (DOCL[r.k] || r.k) + ' (' + r.s + ')').join(', '));
   const need = inspItems(it), failed = need.filter(k => !checklist || checklist[k] !== true);
   if (failed.length) throw new Error('Physical inspection incomplete: ' + failed.length + ' checklist item(s) not passed');
@@ -540,7 +542,7 @@ function verifyPublic(id, tok) {
   let f = fitness(it, docs, today);
   if (st.Status !== 'Active') f = { state: 'VOID', why: [st.Status === 'Void' ? (st.VoidReason || 'Sticker void') : 'Superseded sticker'] };
   // Live, public-safe view: document status and validity dates only. No document numbers, file links, driver names or remarks.
-  const rs = ruleStates(it, docs, today).map(r => {
+  const rs = ruleStates(it, docs, today).filter(r => !r.opt).map(r => {
     const d = r.docId ? docs.filter(x => x.DocID === r.docId)[0] : null, exp = d && d.Expiry ? d.Expiry : '';
     return { k: r.k, s: r.s, exp: exp, days: exp ? daysBetween(today, exp) : null, pending: !!r.pendingId };
   });
@@ -603,7 +605,7 @@ function sendReminders() {
   const byCo = {};
   items.forEach(i => {
     const entries = [];
-    ruleStates(i, docs, today).forEach(r => {
+    ruleStates(i, docs, today).filter(r => !r.opt).forEach(r => {
       const d = docs.filter(x => x.DocID === r.docId)[0];
       if (d && d.Expiry) entries.push({ what: DOCL[r.k] || r.k, date: d.Expiry, base: i.ID + '|' + r.k + '|' + d.Expiry, long: LONG_LEAD.indexOf(r.k) >= 0 });
     });
