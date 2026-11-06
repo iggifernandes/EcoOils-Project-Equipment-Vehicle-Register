@@ -37,7 +37,7 @@ main{padding:18px 0 60px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
 .kpi{background:#fff;border:1px solid var(--line);border-left:4px solid var(--y);padding:10px 14px}
 .kpi b{display:block;font-size:1.6rem;font-weight:400}.kpi span{font-size:.72rem;color:var(--grey);text-transform:uppercase;letter-spacing:.08em}
-.kpi.r{border-left-color:var(--r)}.kpi.w{border-left-color:var(--warn)}
+.kpi{cursor:pointer;transition:background .15s}.kpi:hover{background:#fff6cc}.kpi.on{background:#fff6cc;outline:2px solid #FBCE07}.kpi b{text-decoration:underline;text-underline-offset:4px}.kpi.r{border-left-color:var(--r)}.kpi.w{border-left-color:var(--warn)}
 .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);background:#fff;color:var(--ink);width:100%}
 .bar input,.bar select{width:auto;flex:1 1 150px}
@@ -94,7 +94,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.7.4';const NEED_BACKEND='1.7.0';const NAOK=['contain','elcb'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
+const VERSION='1.7.5';const NEED_BACKEND='1.7.0';const NAOK=['contain','elcb'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -211,14 +211,15 @@ async function load(){try{const r=await api('list');
 
 // ---------- register / lists ----------
 let flt={q:'',cat:'',st:'',co:''};
+function kpiGo(st){flt.st=st;flt.q='';flt.cat='';flt.co='';tab='register';render();}
 function viewRegister(){
-  const kp=[[t('total'),items.length,''],[t('fit'),items.filter(i=>i.Fit==='FIT').length,''],[t('pending'),items.filter(i=>i.Status==='Submitted'||pendingDocs(i)).length,'w'],[t('expiring'),docs.filter(d=>{const n=daysLeft(d.Expiry);return d.Verified==='Yes'&&n!==null&&n>=0&&n<=30;}).length,'w'],[t('expired'),items.filter(i=>i.Fit==='SUSPENDED'||i.Fit==='VOID').length,'r']];
-  const rows=items.filter(i=>(!flt.cat||i.Category===flt.cat)&&(!flt.st||sl(i)===flt.st)&&(!flt.co||i.Company===flt.co)&&(!flt.q||JSON.stringify(i).toLowerCase().includes(flt.q.toLowerCase())));
+  const kp=[[t('total'),items.length,'',"kpiGo('')",!flt.st],[t('fit'),items.filter(i=>i.Fit==='FIT').length,'',"kpiGo('FIT')",flt.st==='FIT'],[t('pending'),items.filter(i=>i.Status==='Submitted'||pendingDocs(i)).length,'w',"go('approvals')",false],[t('expiring'),docs.filter(d=>{const n=daysLeft(d.Expiry);return d.Verified==='Yes'&&n!==null&&n>=0&&n<=30;}).length,'w',"go('alerts')",false],[t('expired'),items.filter(i=>i.Fit==='SUSPENDED'||i.Fit==='VOID').length,'r',"kpiGo('BAD')",flt.st==='BAD']];
+  const rows=items.filter(i=>(!flt.cat||i.Category===flt.cat)&&(!flt.st||(flt.st==='BAD'?(i.Fit==='SUSPENDED'||i.Fit==='VOID'):sl(i)===flt.st))&&(!flt.co||i.Company===flt.co)&&(!flt.q||JSON.stringify(i).toLowerCase().includes(flt.q.toLowerCase())));
   const sts=['FIT','SUSPENDED','VOID','Draft','Submitted','Rejected'];
-  $('#app').innerHTML=msg(note.replace(/^!/,''),note.startsWith('!'))+`<div class="kpis">${kp.map(k=>`<div class="kpi ${k[2]}"><b>${k[1]}</b><span>${k[0]}</span></div>`).join('')}</div>
+  $('#app').innerHTML=msg(note.replace(/^!/,''),note.startsWith('!'))+`<div class="kpis">${kp.map(k=>`<div class="kpi ${k[2]} ${k[4]?'on':''}" role="button" tabindex="0" onclick="${k[3]}" onkeydown="if(event.key==='Enter')${k[3]}"><b>${k[1]}</b><span>${k[0]}</span></div>`).join('')}</div>
   <div class="bar"><input placeholder="${t('search')}" value="${esc(flt.q)}" oninput="flt.q=this.value;viewRegister();const e=document.querySelector('.bar input');e.focus();e.setSelectionRange(99,99)">
   <select onchange="flt.cat=this.value;viewRegister()"><option value="">${t('category')}: ${t('all')}</option><option value="Vehicle" ${flt.cat==='Vehicle'?'selected':''}>${t('vehicle')}</option><option value="Heavy Equipment" ${flt.cat==='Heavy Equipment'?'selected':''}>${t('heavy')}</option></select>
-  <select onchange="flt.st=this.value;viewRegister()"><option value="">${t('status')}: ${t('all')}</option>${sts.map(s=>`<option value="${s}" ${flt.st===s?'selected':''}>${t(s)}</option>`).join('')}</select>
+  <select onchange="flt.st=this.value;viewRegister()"><option value="">${t('status')}: ${t('all')}</option>${flt.st==='BAD'?`<option value="BAD" selected>${t('expired')}</option>`:''}${sts.map(s=>`<option value="${s}" ${flt.st===s?'selected':''}>${t(s)}</option>`).join('')}</select>
   <select onchange="flt.co=this.value;viewRegister()"><option value="">${t('company')}: ${t('all')}</option>${COS.map(s=>`<option ${flt.co===s?'selected':''}>${s}</option>`).join('')}</select>
   <button class="btn sec" onclick="exportCsv()">${t('export')}</button></div>
   ${folders(rows)}`;}
