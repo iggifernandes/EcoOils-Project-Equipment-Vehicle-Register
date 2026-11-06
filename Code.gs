@@ -1,5 +1,5 @@
-// VERSION 1.6.17 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.6.17';
+// VERSION 1.6.18 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.6.18';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -30,7 +30,6 @@ const REINSPECT_DAYS = 183; // periodic re-inspection interval (about 6 months):
 
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.
 // Basis (verify with HSSE/legal): UU 22/2009 LLAJ, PP 55/2012, Permenhub 19/2021 (vehicles);
-// Permenaker 8/2020, 9/2010 (lifting equipment and operators), 38/2016 (generators, compressors).
 const DOCL = { stnk: 'STNK', pkb: 'PKB tax / SWDKLLJ proof', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
 const OPTIONAL_DOCS = ['own'];
