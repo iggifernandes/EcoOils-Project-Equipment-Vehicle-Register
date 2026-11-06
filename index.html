@@ -94,7 +94,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.6.13';
+const VERSION='1.6.14';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -469,8 +469,28 @@ function blankItem(f){return{ID:'',Category:f.cat,Type:'',MakeModel:'',PlateSeri
 function viewForms(){const L=lang==='id'?'id':'en';
   $('#app').innerHTML=`<div class="card"><h3 style="margin-top:0">${t('formsh')}</h3><div class="hint">${t('formsnote')}</div>
   <div class="tw" style="margin-top:10px"><table><thead><tr><th>${t('formsn')}</th><th></th></tr></thead><tbody>${FORMS.map(f=>`<tr><td>${esc(f[L])}</td><td style="white-space:nowrap"><button class="btn sm" onclick="blankForm('${f.k}','print')">${t('formsp')}</button> <button class="btn sec sm" onclick="blankForm('${f.k}','dl')">${t('formsd')}</button></td></tr>`).join('')}</tbody></table></div></div>`;}
+
+// ---------- real PDF download (html2canvas + jsPDF loaded on first use; pages break between rows, never through one) ----------
+function loadJs(u){return new Promise((ok,no)=>{const x=document.createElement('script');x.src=u;x.onload=ok;x.onerror=()=>no(new Error('Could not load the PDF tool. Check the internet connection, or use Print and choose Save as PDF.'));document.head.appendChild(x);});}
+async function loadPdfLib(){const L=window.PDFLIBS||['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];if(!window.html2canvas)await loadJs(L[0]);if(!(window.jspdf&&window.jspdf.jsPDF))await loadJs(L[1]);}
+async function pdfDownload(html,name){const fr=document.createElement('iframe');
+  try{note='';await loadPdfLib();
+    fr.style.cssText='position:fixed;left:-2000px;top:0;width:794px;height:1123px;border:0';document.body.appendChild(fr);
+    const d=fr.contentDocument;d.open();d.write(html);d.close();
+    await new Promise(r=>{if(d.readyState==='complete')r();else fr.onload=r;setTimeout(r,1500);});
+    try{await d.fonts.ready;}catch(_){}
+    const bd=d.body,W=bd.scrollWidth,H=bd.scrollHeight,SC=2,top0=bd.getBoundingClientRect().top;
+    const cv=await html2canvas(bd,{scale:SC,useCORS:true,backgroundColor:'#ffffff',windowWidth:794,width:W,height:H,x:0,y:0,scrollX:0,scrollY:0});
+    const pw=190,ph=277,pxPage=Math.floor(ph/pw*W);
+    const cand=[];d.querySelectorAll('tbody tr:not(:first-child),h1,h2,h3,.nobreak').forEach(e=>{const y=Math.round(e.getBoundingClientRect().top-top0);if(y>0)cand.push(y);});cand.sort((a,b)=>a-b);
+    const cuts=[0];let y0=0;while(H-y0>pxPage){const lim=y0+pxPage;let c=0;for(const v of cand){if(v<=lim&&v>y0+pxPage*0.35)c=v;}y0=c||lim;cuts.push(y0);}cuts.push(H);
+    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+    for(let n=0;n<cuts.length-1;n++){const a=cuts[n],b2=cuts[n+1],hh=b2-a;const pc=document.createElement('canvas');pc.width=cv.width;pc.height=Math.max(1,Math.round(hh*SC));const g=pc.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,pc.width,pc.height);g.drawImage(cv,0,Math.round(a*SC),cv.width,pc.height,0,0,pc.width,pc.height);
+      if(n)pdf.addPage();pdf.addImage(pc.toDataURL('image/jpeg',0.95),'JPEG',10,10,pw,hh/W*pw);}
+    pdf.save(name);
+  }catch(e){note='!'+e.message;render();}finally{fr.remove();}}
 function blankForm(k,mode){const f=FORMS.find(x=>x.k===k),html=chkDoc(blankItem(f));
-  if(mode==='dl'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download='Pre-Mobilisation-HSSE-Inspection-Checklist-'+k+'.html';a.click();return;}
+  if(mode==='dl'){pdfDownload(html,'Pre-Mobilisation-HSSE-Inspection-Checklist-'+k+'.pdf');return;}
   const w=window.open('','_blank');if(!w){note='!Allow pop-ups to print the form';render();return;}w.document.open();w.document.write(html);w.document.close();setTimeout(()=>w.print(),900);}
 function docRow(i,r){const d=docs.find(x=>x.DocID===(r.pendingId||r.docId));const n=docs.filter(x=>x.ItemID===i.ID&&x.DocType===r.k).length;
   const canV=isHSSE()&&d&&d.Verified==='';
