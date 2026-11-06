@@ -1,5 +1,5 @@
-// VERSION 1.6.18 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.6.18';
+// VERSION 1.6.19 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.6.19';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -15,7 +15,7 @@ const SS_H = ['TokenHash','Email','Expires'];
 const CT_ROLES = ['Logistics', 'HR', 'HSSE'];
 const REMIND_AT = [30, 14, 7, 3, 0];   // days before expiry when a reminder is sent
 const REMIND_LONG = [60, 30, 14, 7, 3, 0]; // documents that take weeks to renew get an earlier first reminder
-const LONG_LEAD = ['silo', 'rep', 'sio', 'kir', 'sim', 'stnk']; // SILO, PJK3 report, operator SIO, KIR, SIM, STNK
+const LONG_LEAD = ['silo', 'rep', 'sio', 'kir', 'sim', 'stnk', 'swd']; // SILO, PJK3 report, operator SIO, KIR, SIM, STNK
 const EXPIRED_EVERY_DAYS = 3;          // after expiry the reminder repeats every 3 days
 const MAIL_NAME = 'EcoOils HSSE | Heavy Equipment & Vehicle Register';
 const MAIL_FROM = ADMIN_EMAIL;         // shown as the sender when it is a verified Gmail "Send mail as" alias, otherwise used as Reply-To
@@ -29,13 +29,13 @@ const LIFT = ['Mobile crane', 'All-terrain crane', 'Rough-terrain crane', 'Truck
 const REINSPECT_DAYS = 183; // periodic re-inspection interval (about 6 months): change here
 
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.
-const DOCL = { stnk: 'STNK', pkb: 'PKB tax / SWDKLLJ proof', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
+const DOCL = { swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
-const OPTIONAL_DOCS = ['own'];
+const OPTIONAL_DOCS = ['own', 'ins']; // ownership/rental agreement and vehicle damage insurance are commercial matters between the IC and its vendor
 function docRules(i) {
   const R = [];
   if (i.Category === 'Vehicle') {
-    R.push(['stnk', 1, 1], ['pkb', 1, 0], ['own', 2, 0], ['ins', 1, 0], ['sim', 1, 1], ['mcu', 1, 0], ['ddc', 1, 0], ['photo', 0, 0], ['chk', 0, 0]);
+    R.push(['stnk', 1, 1], ['pkb', 1, 0], ['swd', 1, 0], ['own', 2, 0], ['ins', 1, 0], ['sim', 1, 1], ['mcu', 1, 0], ['ddc', 1, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (KIR_EXEMPT.indexOf(i.Type) < 0) R.push(['kir', 1, 1]);
     if (i.Type === 'Tanker truck') R.push(['b3', 2, 0]);
   } else {
