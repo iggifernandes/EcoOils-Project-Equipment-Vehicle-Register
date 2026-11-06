@@ -94,7 +94,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.6.20';const NEED_BACKEND='1.6.20';
+const VERSION='1.6.21';const NEED_BACKEND='1.6.21';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -207,7 +207,7 @@ async function signout(){try{if(token)await api('logout');}catch(e){}token='';us
 async function load(){try{const r=await api('list');
   if(!Array.isArray(r.items)||!Array.isArray(r.docs)||!Array.isArray(r.stickers)||r.items.some(i=>!Array.isArray(i.Rules))){user=r.user||user;items=[];docs=[];stickers=[];note='!The backend (Code.gs) is older than this page. In Apps Script paste the latest Code.gs, run setup(), then Deploy > Manage deployments > Edit > New version > Deploy.';render();return;}
   user=r.user;items=r.items;docs=r.docs;stickers=r.stickers;items.forEach(i=>i.Rules.forEach(x=>{if(x.opt===undefined)x.opt=(x.k==='own'||x.k==='ins');}));
-  const vn=v=>String(v||'0').split('.').map(Number),a=vn(r.ver),b=vn(NEED_BACKEND),old=(()=>{for(let n=0;n<3;n++){if((a[n]||0)!==b[n])return (a[n]||0)<b[n];}return false;})();if(old)note='!The backend (Code.gs) is v'+(r.ver||'older')+' but this page needs v'+NEED_BACKEND+'. Paste the latest Code.gs in Apps Script, then Deploy > Manage deployments > Edit > New version > Deploy. Until then, new items (SWDKLLJ, optional documents) will not show.';}catch(e){token='';user=null;localStorage.removeItem('evr_tok');sessionStorage.removeItem('evr_tok');errNote(e);}render();}
+  const vn=v=>String(v||'0').split('.').map(Number),a=vn(r.ver),b=vn(NEED_BACKEND),old=(()=>{for(let n=0;n<3;n++){if((a[n]||0)!==b[n])return (a[n]||0)<b[n];}return false;})();if(old)note='!The backend (Code.gs) is '+(r.ver?'v'+r.ver:'an older version')+' but this page needs v'+NEED_BACKEND+'. Paste the latest Code.gs in Apps Script, then Deploy > Manage deployments > Edit > New version > Deploy. Until then, new items (SWDKLLJ, optional documents) will not show.';}catch(e){token='';user=null;localStorage.removeItem('evr_tok');sessionStorage.removeItem('evr_tok');errNote(e);}render();}
 
 // ---------- register / lists ----------
 let flt={q:'',cat:'',st:'',co:''};
