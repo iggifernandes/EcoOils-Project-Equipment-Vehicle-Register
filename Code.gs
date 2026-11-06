@@ -1,5 +1,5 @@
-// VERSION 1.6.15 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.6.15';
+// VERSION 1.6.16 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.6.16';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -376,6 +376,15 @@ function uploadDoc(user, p) {
   const rule = docRules(it).filter(r => r.k === p.docType)[0];
   if (!rule) throw new Error('This document is not required for this entry');
   if (rule.num && !String(p.number || '').trim()) throw new Error('Document number is required');
+  // Medical fit (MCU): issue date is required; validity defaults to 1 year from the issue date. The issue date is kept in Note.
+  let noteTxt = p.note || '';
+  if (p.docType === 'mcu') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.issued || '')) throw new Error('Issue date of the medical certificate is required');
+    if (p.issued > todayStr()) throw new Error('Issue date cannot be in the future');
+    if (!p.expiry) p.expiry = (parseInt(p.issued.slice(0, 4), 10) + 1) + p.issued.slice(4);
+    if (p.expiry <= p.issued) throw new Error('Valid-until must be after the issue date');
+    noteTxt = 'Issued: ' + p.issued;
+  }
   if (p.expiry && !/^\d{4}-\d{2}-\d{2}$/.test(p.expiry)) throw new Error('Invalid expiry date');
   if (rule.exp === 1 && !p.expiry) throw new Error('Expiry date is required');
   if (p.expiry && p.expiry < todayStr()) throw new Error('This document is already expired');
@@ -390,7 +399,7 @@ function uploadDoc(user, p) {
       if (d.ItemID === it.ID && d.DocType === p.docType && isTrue(d.Current) && d.Verified !== 'Yes') { d.Current = 'FALSE'; writeRow('Documents', DOC_H, d); }
     });
   }
-  addRow('Documents', DOC_H, { DocID: docId, ItemID: it.ID, DocType: p.docType, Number: String(p.number || '').trim(), Expiry: p.expiry || '', FileName: safe, FileId: file.getId(), UploadedBy: user.email, UploadedAt: now, Verified: '', Note: p.note || '', Current: 'TRUE' });
+  addRow('Documents', DOC_H, { DocID: docId, ItemID: it.ID, DocType: p.docType, Number: String(p.number || '').trim(), Expiry: p.expiry || '', FileName: safe, FileId: file.getId(), UploadedBy: user.email, UploadedAt: now, Verified: '', Note: noteTxt, Current: 'TRUE' });
   audit(user, 'upload', it.ID, p.docType + ' ' + docId);
   return { ok: true, docId: docId };
 }
