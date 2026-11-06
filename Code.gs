@@ -1,10 +1,10 @@
-// VERSION 1.6.25 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.6.25';
+// VERSION 1.7.0 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.7.0';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
 
-const EQ_H = ['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','OperatorLicenceClass','Status','LocationStatus','NextInspection','DecisionNote','Remarks','SubmittedBy','SubmittedAt','DecidedBy','DecidedAt','UpdatedAt'];
+const EQ_H = ['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','OperatorLicenceClass','Status','LocationStatus','NextInspection','DecisionNote','Remarks','SubmittedBy','SubmittedAt','DecidedBy','DecidedAt','UpdatedAt','YearMfg','CertOutside','AgeOverride'];
 const DOC_H = ['DocID','ItemID','DocType','Number','Expiry','FileName','FileId','UploadedBy','UploadedAt','Verified','VerifiedBy','VerifiedAt','Note','Current'];
 const ST_H = ['StickerNo','ItemID','Token','IssuedAt','IssuedBy','Status','PrintCount','PrintedAt','PrintedBy','ReprintAllowed','ReprintReason','VoidReason','VoidedBy','VoidedAt'];
 const IN_H = ['InspID','ItemID','Date','Inspector','Kind','Result','Checklist','Notes'];
@@ -26,10 +26,19 @@ const MIMES = ['application/pdf', 'image/jpeg', 'image/png'];
 const KIR_EXEMPT = ['Light vehicle', 'Motorcycle'];
 // Lifting equipment (needs the rigger / signalman certificate and the wire-rope and hook check). Keep in step with LIFTT in index.html.
 const LIFT = ['Mobile crane', 'All-terrain crane', 'Rough-terrain crane', 'Truck-mounted crane / boom truck', 'Knuckle boom / loader crane', 'Pick and carry crane', 'Crawler crane', 'Mini / spider crane', 'Tower crane', 'Overhead / gantry crane', 'Telescopic handler (telehandler)', 'Pipelayer / side boom', 'Hoist / chain block'];
-const REINSPECT_DAYS = 183; // periodic re-inspection interval (about 6 months): change here
+const REINSPECT_DAYS = 30; // periodic (monthly) re-inspection interval: change here
+const MAX_AGE = { 'Vehicle': 5, 'Heavy Equipment': 10 }; // maximum age in years (IC HSSE requirement)
+const NA_OK = ['contain', 'elcb']; // checklist items that can be marked N/A (only where the equipment has no fuel / electrical panel)
+const INSP_KINDS = ['Pre-mobilisation', 'Site', 'Monthly'];
+function ageInfo(it) {
+  const y = parseInt(it.YearMfg, 10), max = MAX_AGE[it.Category] || 10;
+  if (!y) return { year: 0, age: null, max: max, over: false };
+  const age = parseInt(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy'), 10) - y;
+  return { year: y, age: age, max: max, over: age > max };
+}
 
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.
-const DOCL = { ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
+const DOCL = { end: 'Disnaker Sumut endorsement', ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
 const OPTIONAL_DOCS = ['own']; // ownership/rental agreement is a commercial matter between the IC and its vendor
 function docRules(i) {
@@ -39,7 +48,9 @@ function docRules(i) {
     if (KIR_EXEMPT.indexOf(i.Type) < 0) R.push(['kir', 1, 1]);
     if (i.Type === 'Tanker truck') R.push(['b3', 2, 0]);
   } else {
-    R.push(['silo', 1, 1], ['rep', 1, 1], ['sio', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ins', 1, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
+    R.push(['silo', 1, 1], ['rep', 1, 1]);
+    if (i.CertOutside === 'Yes') R.push(['end', 2, 0]); // certificate issued outside Sumatera Utara must be endorsed by Disnaker Sumut
+    R.push(['sio', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ins', 1, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (LIFT.indexOf(i.Type) >= 0) R.push(['rig', 1, 1]);
   }
   // Optional documents (not required for approval or fitness): commercial arrangements between the IC and its vendor.
@@ -47,9 +58,13 @@ function docRules(i) {
 }
 
 function inspItems(i) {
-  return i.Category === 'Vehicle'
-    ? ['lights', 'brakes', 'tyres', 'horn', 'rev', 'belts', 'mirrors', 'leaks', 'fire', 'aid', 'chock', 'body', 'ivms', 'interior'].concat(i.Type === 'Truck' || i.Type === 'Tanker truck' || i.Type === 'Pickup / light truck' ? ['cargo'] : [])
-    : ['hyd', 'steer', 'safety', 'alarms', 'rops', 'guards', 'under', 'fire', 'aid', 'plate', 'leaks', 'spark', 'body'].concat(LIFT.indexOf(i.Type) >= 0 ? ['rope'] : []);
+  if (i.Category === 'Vehicle') {
+    const L = ['lights', 'brakes', 'tyres', 'horn', 'rev', 'belts', 'mirrors', 'leaks', 'fire', 'aid', 'chock', 'triangle', 'jack', 'glass', 'body', 'ivms', 'interior'];
+    if (i.Type === 'Truck' || i.Type === 'Tanker truck' || i.Type === 'Pickup / light truck') L.push('cargo');
+    if (i.Type === 'Truck' || i.Type === 'Tanker truck' || i.Type === 'Foco truck') L.push('cones', 'rotary', 'spark'); // transporters
+    return L;
+  }
+  return ['hyd', 'steer', 'safety', 'alarms', 'rops', 'guards', 'under', 'fire', 'aid', 'plate', 'leaks', 'spark', 'body', 'chock', 'triangle', 'jack', 'cones', 'rotary', 'contain', 'elcb'].concat(LIFT.indexOf(i.Type) >= 0 ? ['rope'] : []);
 }
 
 // ---------- ONE-TIME SETUP: run once from the Apps Script editor ----------
@@ -57,7 +72,7 @@ function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   [['Equipment', EQ_H], ['Documents', DOC_H], ['Stickers', ST_H], ['Inspections', IN_H], ['Audit', AU_H], ['Contacts', CT_H], ['ReminderLog', RL_H], ['Sessions', SS_H], ['Training', TRAIN_H], ['Warnings', WARN_H], ['Users', USER_H]].forEach(p => {
     const sh = ss.getSheetByName(p[0]) || ss.insertSheet(p[0]);
-    if (sh.getLastRow() === 0) sh.appendRow(p[1]);
+    if (sh.getLastRow() === 0) sh.appendRow(p[1]); else sh.getRange(1, 1, 1, p[1].length).setValues([p[1]]);
     sh.getRange(2, 1, sh.getMaxRows() - 1, p[1].length).setNumberFormat('@');
   });
   const us = ss.getSheetByName('Users');
@@ -91,7 +106,8 @@ function doPost(e) {
         case 'uploadDoc':      return out(uploadDoc(user, r));
         case 'getFile':        return out(getFile(user, r.docId));
         case 'verifyDoc':      return out(verifyDoc(user, r.docId, r.result, r.note));
-        case 'approve':        return out(approve(user, r.itemId, r.checklist, r.notes));
+        case 'approve':        return out(approve(user, r.itemId, r.checklist, r.notes, r.kind));
+        case 'ageOverride':    return out(ageOverride(user, r.itemId, r.reason));
         case 'reject':         return out(reject(user, r.itemId, r.note));
         case 'voidItem':       return out(voidItem(user, r.itemId, r.reason));
         case 'printSticker':   return out(printSticker(user, r.itemId));
@@ -270,6 +286,8 @@ function fitness(item, allDocs, today) {
   if (item.Status !== 'Approved') return { state: 'NOT APPROVED', why: [item.Status] };
   const why = [];
   ruleStates(item, allDocs, today).forEach(r => { if (!r.opt && r.s !== 'ok') why.push((DOCL[r.k] || r.k) + ': ' + r.s); });
+  const ag = ageInfo(item);
+  if (ag.over && !item.AgeOverride) why.push('Over maximum age (' + ag.age + ' years, maximum ' + ag.max + ')');
   if (item.NextInspection && item.NextInspection < today) why.push('Re-inspection overdue (' + item.NextInspection + ')');
   return { state: why.length ? 'SUSPENDED' : 'FIT', why: why };
 }
@@ -307,12 +325,19 @@ function saveItem(user, item) {
   const dup = readAll('Equipment', EQ_H).filter(x => x.PlateSerial === plate && x.ID !== item.ID && x.Status !== 'Void')[0];
   if (dup) throw new Error('Already registered as ' + dup.ID);
   const now = iso(), F = ['Category', 'Type', 'MakeModel', 'OperatorName', 'OperatorLicenceClass', 'Remarks'];
+  const yr = String(item.YearMfg || '').trim(), maxY = parseInt(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy'), 10) + 1;
+  if (yr && (!/^\d{4}$/.test(yr) || +yr < 1970 || +yr > maxY)) throw new Error('Year of manufacture must be a 4-digit year');
+  if (!item.ID && !yr) throw new Error('Year of manufacture is required');
+  const certOut = item.Category === 'Heavy Equipment' && item.CertOutside === 'Yes' ? 'Yes' : '';
   if (item.ID) {
     const cur = getItem(item.ID);
     if (!canWork(user, cur)) throw new Error('Not allowed');
     if (cur.Status === 'Approved' && (cur.Category !== item.Category || cur.Type !== item.Type || cur.PlateSerial !== plate)) throw new Error('Void the inspection first to change category, type or plate');
     if (user.role === 'IC' && ['Draft', 'Rejected', 'Void'].indexOf(cur.Status) < 0 && (cur.Category !== item.Category || cur.Type !== item.Type)) throw new Error('Entry is locked while with HSSE');
+    if (user.role === 'IC' && ['Draft', 'Rejected', 'Void'].indexOf(cur.Status) < 0 && ((yr && cur.YearMfg !== yr) || cur.CertOutside !== certOut)) throw new Error('Entry is locked while with HSSE');
     F.forEach(f => cur[f] = item[f] || '');
+    if (yr && cur.YearMfg !== yr) { cur.YearMfg = yr; cur.AgeOverride = ''; }
+    cur.CertOutside = certOut;
     cur.PlateSerial = plate; cur.UpdatedAt = now;
     if (user.role === 'HSSE') { cur.Company = item.Company || cur.Company; cur.LocationStatus = item.LocationStatus || cur.LocationStatus; }
     writeRow('Equipment', EQ_H, cur);
@@ -321,6 +346,7 @@ function saveItem(user, item) {
   }
   const o = { Status: 'Draft', LocationStatus: LOCATIONS.indexOf(item.LocationStatus) >= 0 ? item.LocationStatus : 'Off-site', PlateSerial: plate, UpdatedAt: now };
   F.forEach(f => o[f] = item[f] || '');
+  o.YearMfg = yr; o.CertOutside = certOut;
   o.Company = user.role === 'IC' ? user.company : (item.Company || '');
   if (!o.Company) throw new Error('Company is required');
   o.ID = nextId(o.Category);
@@ -431,7 +457,7 @@ function verifyDoc(user, docId, result, note) {
 }
 
 // ---------- inspection, approval, sticker ----------
-function approve(user, id, checklist, notes) {
+function approve(user, id, checklist, notes, kindIn) {
   needHSSE(user);
   const it = getItem(id), today = todayStr();
   if (['Submitted', 'Approved'].indexOf(it.Status) < 0) throw new Error('Entry is not submitted for inspection');
@@ -439,11 +465,14 @@ function approve(user, id, checklist, notes) {
   const docs = readAll('Documents', DOC_H).filter(d => isTrue(d.Current));
   const rs = ruleStates(it, docs, today), bad = rs.filter(r => !r.opt && r.s !== 'ok');
   if (bad.length) throw new Error('Cannot approve. ' + bad.map(r => (DOCL[r.k] || r.k) + ' (' + r.s + ')').join(', '));
-  const need = inspItems(it), failed = need.filter(k => !checklist || checklist[k] !== true);
+  const ag = ageInfo(it);
+  if (!ag.year) throw new Error('Year of manufacture is required: ask the contractor to fill it in');
+  if (ag.over && !it.AgeOverride) throw new Error('Over the maximum age (' + ag.age + ' years, maximum ' + ag.max + '). Record an HSSE override with a reason first');
+  const need = inspItems(it), failed = need.filter(k => !checklist || !(checklist[k] === true || (NA_OK.indexOf(k) >= 0 && checklist[k] === 'na')));
   if (failed.length) throw new Error('Physical inspection incomplete: ' + failed.length + ' checklist item(s) not passed');
   let minExp = plusDays(REINSPECT_DAYS);
   rs.forEach(r => { const d = docs.filter(x => x.DocID === r.docId)[0]; if (d && d.Expiry && d.Expiry < minExp) minExp = d.Expiry; });
-  const kind = it.Status === 'Submitted' ? 'Initial' : 'Re-inspection';
+  const kind = INSP_KINDS.indexOf(kindIn) >= 0 ? kindIn : (it.Status === 'Submitted' ? 'Pre-mobilisation' : 'Monthly');
   addRow('Inspections', IN_H, { InspID: 'I-' + Utilities.getUuid().slice(0, 8), ItemID: id, Date: iso(), Inspector: user.email, Kind: kind, Result: 'Pass', Checklist: JSON.stringify(checklist), Notes: notes || '' });
   it.Status = 'Approved'; it.NextInspection = minExp; it.DecidedBy = user.email; it.DecidedAt = iso(); it.DecisionNote = notes || ''; it.UpdatedAt = iso();
   writeRow('Equipment', EQ_H, it);
@@ -457,6 +486,17 @@ function approve(user, id, checklist, notes) {
   }
   audit(user, 'approve', id, kind + ' ' + stickerNo + (created ? ' issued' : ''));
   return { ok: true, stickerNo: stickerNo, created: created, nextInspection: minExp };
+}
+
+function ageOverride(user, id, reason) {
+  needHSSE(user);
+  const it = getItem(id), ag = ageInfo(it);
+  if (!ag.over) throw new Error('This unit is within the maximum age');
+  if (!String(reason || '').trim()) throw new Error('Give the reason for the override');
+  it.AgeOverride = user.email + ' | ' + todayStr() + ' | ' + String(reason).trim().slice(0, 200); it.UpdatedAt = iso();
+  writeRow('Equipment', EQ_H, it);
+  audit(user, 'ageOverride', id, it.AgeOverride);
+  return { ok: true };
 }
 
 function reject(user, id, note) {
