@@ -94,7 +94,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.7.1';const NEED_BACKEND='1.7.0';const NAOK=['contain','elcb'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
+const VERSION='1.7.2';const NEED_BACKEND='1.7.0';const NAOK=['contain','elcb'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -524,7 +524,7 @@ function uploadBar(i){if(!canWork())return `<div class="msg err">Your account ro
   <div class="w2"><label>${t('file')}</label><input id="upfile" type="file" accept=".pdf,image/jpeg,image/png"></div><button class="btn" id="upbtn" onclick="doUpload()">${t('doUpload')}</button></div><div id="updis" class="hint" style="color:#8a1c1c;display:none;white-space:normal;margin:6px 0"></div>`;}
 function syncUp(){const i=items.find(x=>x.ID===cur),k=$('#upk').value,r=i.Rules.find(x=>x.k===k);if(!r)return;
   const num=$('#upnum'),ex=$('#upexp');num.disabled=!r.num;if(!r.num)num.value='';ex.disabled=!r.exp;if(!r.exp)ex.value='';
-  const mc=k==='mcu';$('#upiw').style.display=mc?'':'none';if(!mc)$('#upiss').value='';const sw=k==='swd',dv=$('#updis');dv.style.display=(mc||sw)?'':'none';dv.innerHTML=mc?esc(t('mcudisc')):sw?esc(t('swddisc'))+' <a href="#" onclick="showSample();return false">'+t('swdsample')+'</a>':'';ex.min=new Date().toISOString().slice(0,10);$('#uplbl').textContent=t('validity')+(r.exp===2?' (opt.)':'');}
+  const mc=k==='mcu';$('#upiw').style.display=mc?'':'none';if(!mc)$('#upiss').value='';const sw=k==='swd',ow=!!r.opt,dv=$('#updis');dv.style.display=(mc||sw||ow)?'':'none';dv.innerHTML=mc?esc(t('mcudisc')):ow?esc(t('optdisc')):sw?esc(t('swddisc'))+' <a href="#" onclick="showSample();return false">'+t('swdsample')+'</a>':'';ex.min=new Date().toISOString().slice(0,10);$('#uplbl').textContent=t('validity')+(r.exp===2?' (opt.)':'');}
 function showSample(){const o=document.createElement('div');o.className='rvo';o.style.zIndex=95;o.innerHTML='<div style="background:#fff;padding:10px;max-width:min(640px,96vw);border-top:4px solid #FBCE07"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>SWDKLLJ</b><button class="btn sec sm" onclick="this.closest(\'.rvo\').remove()">&times;</button></div><img src="img/swdkllj-sample.jpg" style="width:100%;display:block"><div class="hint" style="margin-top:6px">Sample for identification only.</div></div>';o.addEventListener('click',e=>{if(e.target===o)o.remove();});(dlg.open?dlg:document.body).appendChild(o);}
 function issChg(){const v=$('#upiss').value;if(!v)return;const y=+v.slice(0,4)+1;$('#upexp').value=y+v.slice(4);}
 function pickDoc(k){const s=$('#upk');if(!s)return;s.value=k;syncUp();s.scrollIntoView({block:'center'});$('#upfile').focus();}
