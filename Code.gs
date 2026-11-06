@@ -29,7 +29,6 @@ const LIFT = ['Mobile crane', 'All-terrain crane', 'Rough-terrain crane', 'Truck
 const REINSPECT_DAYS = 183; // periodic re-inspection interval (about 6 months): change here
 
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.
-// Basis (verify with HSSE/legal): UU 22/2009 LLAJ, PP 55/2012, Permenhub 19/2021 (vehicles);
 const DOCL = { stnk: 'STNK', pkb: 'PKB tax / SWDKLLJ proof', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
 const OPTIONAL_DOCS = ['own'];
