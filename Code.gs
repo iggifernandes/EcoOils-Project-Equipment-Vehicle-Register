@@ -1,5 +1,5 @@
-// VERSION 1.6.23 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.6.23';
+// VERSION 1.6.25 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.6.25';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -31,7 +31,7 @@ const REINSPECT_DAYS = 183; // periodic re-inspection interval (about 6 months):
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.
 const DOCL = { ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
-const OPTIONAL_DOCS = ['own', 'ins']; // ownership/rental agreement and vehicle damage insurance are commercial matters between the IC and its vendor
+const OPTIONAL_DOCS = ['own']; // ownership/rental agreement is a commercial matter between the IC and its vendor
 function docRules(i) {
   const R = [];
   if (i.Category === 'Vehicle') {
