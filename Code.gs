@@ -1,5 +1,5 @@
-// VERSION 1.6.6 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.6.6';
+// VERSION 1.6.7 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.6.7';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -24,7 +24,8 @@ const USER_H = ['Email','Name','Role','Company','Active','Salt','Hash'];
 const MAX_BYTES = 4 * 1024 * 1024;
 const MIMES = ['application/pdf', 'image/jpeg', 'image/png'];
 const KIR_EXEMPT = ['Light vehicle', 'Motorcycle'];
-const LIFT = ['Mobile crane', 'Crawler crane', 'Tower crane', 'Hoist / chain block'];
+// Lifting equipment (needs the rigger / signalman certificate and the wire-rope and hook check). Keep in step with LIFTT in index.html.
+const LIFT = ['Mobile crane', 'All-terrain crane', 'Rough-terrain crane', 'Truck-mounted crane / boom truck', 'Knuckle boom / loader crane', 'Pick and carry crane', 'Crawler crane', 'Mini / spider crane', 'Tower crane', 'Overhead / gantry crane', 'Telescopic handler (telehandler)', 'Pipelayer / side boom', 'Hoist / chain block'];
 const REINSPECT_DAYS = 183; // periodic re-inspection interval (about 6 months): change here
 
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.

@@ -90,7 +90,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.6.6';
+const VERSION='1.6.7';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -99,7 +99,8 @@ const LOGO_URL='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaoAAAB0CAYAAADUzH
 const COS=['EcoOils','GSB','WEN','KKS','PBS','Other']; // EcoOils always first
 const LOCS=['On-site','Off-site','Under repair','Removed'];
 const VTYPES=['Light vehicle','Pickup / light truck','Bus / minibus','Truck','Tanker truck','Motorcycle'];
-const HTYPES=['Mobile crane','Crawler crane','Tower crane','Forklift','Excavator','Bulldozer','Wheel loader','Dump truck','Aerial work platform','Hoist / chain block','Other'];
+const LIFTT=['Mobile crane','All-terrain crane','Rough-terrain crane','Truck-mounted crane / boom truck','Knuckle boom / loader crane','Pick and carry crane','Crawler crane','Mini / spider crane','Tower crane','Overhead / gantry crane','Telescopic handler (telehandler)','Pipelayer / side boom','Hoist / chain block'];
+const HTYPES=LIFTT.concat(['Forklift','Reach stacker / container handler','Excavator','Mini excavator','Backhoe loader','Bulldozer','Wheel loader','Skid steer loader','Motor grader','Road roller / compactor','Dump truck','Concrete mixer truck','Concrete pump','Piling rig / drilling rig','Aerial work platform (boom / scissor)','Generator set','Air compressor','Lighting tower','Welding machine','Other']);
 const SIMCLS=['A','B1','B2','B1 Umum','B2 Umum','C'];
 const CROLES=['Logistics','HR','HSSE'];
 
