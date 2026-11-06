@@ -1,5 +1,5 @@
-// VERSION 1.6.19 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.6.19';
+// VERSION 1.6.20 | Heavy Equipment & Vehicle Register backend | 2026-11-05
+const VERSION = '1.6.20';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -287,7 +287,7 @@ function listAll(user) {
   });
   const docs = docsAll.filter(d => ids[d.ItemID]).map(d => ({ DocID: d.DocID, ItemID: d.ItemID, DocType: d.DocType, Number: user.role === 'Viewer' ? '' : d.Number, Expiry: d.Expiry, FileName: d.FileName, UploadedBy: d.UploadedBy, UploadedAt: d.UploadedAt, Verified: d.Verified, VerifiedBy: d.VerifiedBy, Note: d.Note }));
   const stickers = readAll('Stickers', ST_H).filter(s => ids[s.ItemID]).map(s => ({ StickerNo: s.StickerNo, ItemID: s.ItemID, Token: user.role === 'HSSE' ? s.Token : '', IssuedAt: s.IssuedAt, Status: s.Status, PrintCount: Number(s.PrintCount) || 0, ReprintAllowed: isTrue(s.ReprintAllowed), PrintedAt: s.PrintedAt, PrintedBy: s.PrintedBy }));
-  return { ok: true, user: user, items: outItems, docs: docs, stickers: stickers };
+  return { ok: true, user: user, items: outItems, docs: docs, stickers: stickers, ver: VERSION };
 }
 
 // ---------- items ----------

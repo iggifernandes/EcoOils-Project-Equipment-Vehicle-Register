@@ -94,7 +94,7 @@ dialog::backdrop{background:#0006}
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.6.19';
+const VERSION='1.6.20';const NEED_BACKEND='1.6.20';
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -206,7 +206,8 @@ async function doSetPin(){try{await api('setPin',{email:$('#a_e').value,code:$('
 async function signout(){try{if(token)await api('logout');}catch(e){}token='';user=null;localStorage.removeItem('evr_tok');sessionStorage.removeItem('evr_tok');render();}
 async function load(){try{const r=await api('list');
   if(!Array.isArray(r.items)||!Array.isArray(r.docs)||!Array.isArray(r.stickers)||r.items.some(i=>!Array.isArray(i.Rules))){user=r.user||user;items=[];docs=[];stickers=[];note='!The backend (Code.gs) is older than this page. In Apps Script paste the latest Code.gs, run setup(), then Deploy > Manage deployments > Edit > New version > Deploy.';render();return;}
-  user=r.user;items=r.items;docs=r.docs;stickers=r.stickers;}catch(e){token='';user=null;localStorage.removeItem('evr_tok');sessionStorage.removeItem('evr_tok');errNote(e);}render();}
+  user=r.user;items=r.items;docs=r.docs;stickers=r.stickers;items.forEach(i=>i.Rules.forEach(x=>{if(x.opt===undefined)x.opt=(x.k==='own'||x.k==='ins');}));
+  const vn=v=>String(v||'0').split('.').map(Number),a=vn(r.ver),b=vn(NEED_BACKEND),old=(()=>{for(let n=0;n<3;n++){if((a[n]||0)!==b[n])return (a[n]||0)<b[n];}return false;})();if(old)note='!The backend (Code.gs) is v'+(r.ver||'older')+' but this page needs v'+NEED_BACKEND+'. Paste the latest Code.gs in Apps Script, then Deploy > Manage deployments > Edit > New version > Deploy. Until then, new items (SWDKLLJ, optional documents) will not show.';}catch(e){token='';user=null;localStorage.removeItem('evr_tok');sessionStorage.removeItem('evr_tok');errNote(e);}render();}
 
 // ---------- register / lists ----------
 let flt={q:'',cat:'',st:'',co:''};
@@ -493,7 +494,7 @@ function blankForm(k,mode){const f=FORMS.find(x=>x.k===k),html=chkDoc(blankItem(
   const w=window.open('','_blank');if(!w){note='!Allow pop-ups to print the form';render();return;}w.document.open();w.document.write(html);w.document.close();setTimeout(()=>w.print(),900);}
 function docRow(i,r){const d=docs.find(x=>x.DocID===(r.pendingId||r.docId));const n=docs.filter(x=>x.ItemID===i.ID&&x.DocType===r.k).length;
   const canV=isHSSE()&&d&&d.Verified==='';
-  let h=`<tr><td>${t('d_'+r.k)}${r.k==='photo'&&n>1?` (${n})`:''}</td><td>${rpill(r.pendingId?'unverified':r.s,r.opt)}${r.pendingId?` <span class="hint">+ ${t('ok')}</span>`:''}</td><td>${esc(d&&d.Number)}${d&&/^Issued: /.test(d.Note||'')?`<div class="hint">${t('issued')}: ${esc(d.Note.slice(8))}</div>`:''}</td><td>${d&&d.Expiry?dpill(d.Expiry):'-'}</td><td>${d&&canWork()?`<button class="btn sec sm" onclick="viewDoc('${d.DocID}')">${t('view')}</button> `:''}${canV?`<button class="btn sm" onclick="vdoc('${d.DocID}','Yes')">${t('verifyyes')}</button> <button class="btn red sm" onclick="vdoc('${d.DocID}','No')">${t('verifyno')}</button> `:''}${canWork()?`<button class="btn sec sm" onclick="pickDoc('${r.k}')">${t('upload')}</button>`:''}</td></tr>`;
+  let h=`<tr><td>${t('d_'+r.k)}${r.k==='photo'&&n>1?` (${n})`:''}${r.k==='swd'?` <a href="#" class="hint" onclick="showSample();return false">${t('swdsample')}</a>`:''}</td><td>${rpill(r.pendingId?'unverified':r.s,r.opt)}${r.pendingId?` <span class="hint">+ ${t('ok')}</span>`:''}</td><td>${esc(d&&d.Number)}${d&&/^Issued: /.test(d.Note||'')?`<div class="hint">${t('issued')}: ${esc(d.Note.slice(8))}</div>`:''}</td><td>${d&&d.Expiry?dpill(d.Expiry):'-'}</td><td>${d&&canWork()?`<button class="btn sec sm" onclick="viewDoc('${d.DocID}')">${t('view')}</button> `:''}${canV?`<button class="btn sm" onclick="vdoc('${d.DocID}','Yes')">${t('verifyyes')}</button> <button class="btn red sm" onclick="vdoc('${d.DocID}','No')">${t('verifyno')}</button> `:''}${canWork()?`<button class="btn sec sm" onclick="pickDoc('${r.k}')">${t('upload')}</button>`:''}</td></tr>`;
   return h;}
 function inspHtml(i){const re=i.Status==='Approved';
   return `<h3>${t('insp')}</h3><div class="chk" id="chkf">${i.Check.map(k=>`<label><input type="checkbox" data-c="${k}"> ${t('c_'+k)}</label>`).join('')}</div>
