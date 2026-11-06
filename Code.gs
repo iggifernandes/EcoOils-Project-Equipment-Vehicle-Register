@@ -1,5 +1,5 @@
-// VERSION 1.7.5 | Heavy Equipment & Vehicle Register backend | 2026-11-05
-const VERSION = '1.7.5';
+// VERSION 1.7.6 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.6';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -719,6 +719,7 @@ function saveTraining(user, p) {
   if (user.role !== 'HSSE' && user.role !== 'IC') throw new Error('Not allowed');
   const name = String(p.driverName || '').trim();
   if (!name) throw new Error('Driver name is required');
+  if (!/^\d{12,16}$/.test(String(p.driverId || '').trim()) && String(p.driverId || '').trim()) throw new Error('SIM / KTP number must be digits only, 12 to 16 digits');
   if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(String(p.signature || '')) || p.signature.length > 45000) throw new Error('Signature is required');
   if (p.agreed !== true) throw new Error('The driver must accept the declaration');
   const g = gradeAnswers(p.answers);
@@ -769,6 +770,7 @@ function issueWarning(user, p) {
   tsheet('Warnings', WARN_H);
   const co = String(p.company || '').trim(), name = String(p.driverName || '').trim();
   if (!co || !name) throw new Error('Company and driver name are required');
+  if (!/^\d{12,16}$/.test(String(p.driverId || '').trim()) && String(p.driverId || '').trim()) throw new Error('SIM / KTP number must be digits only, 12 to 16 digits');
   if (VIOLATIONS.indexOf(p.violation) < 0) throw new Error('Choose the violation');
   if (!String(p.details || '').trim()) throw new Error('Describe what happened');
   const k = dkey(co, p.driverId, name), since = new Date(Date.now() - WARN_MONTHS_DAYS * 864e5).toISOString();
