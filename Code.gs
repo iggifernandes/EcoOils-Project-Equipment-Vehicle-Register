@@ -1,5 +1,5 @@
-// VERSION 1.7.7 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.7';
+// VERSION 1.7.8 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.8';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -38,19 +38,19 @@ function ageInfo(it) {
 }
 
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.
-const DOCL = { end: 'Disnaker Sumut endorsement', ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
+const DOCL = { end: 'Disnaker Sumut endorsement', ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance', insack: 'Insurance Responsibility Acknowledgement (signed)', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
-const OPTIONAL_DOCS = ['own']; // ownership/rental agreement is a commercial matter between the IC and its vendor
+const OPTIONAL_DOCS = ['own', 'insack']; // ownership/rental agreement is a commercial matter between the IC and its vendor
 function docRules(i) {
   const R = [];
   if (i.Category === 'Vehicle') {
-    R.push(['stnk', 1, 1], ['pkb', 1, 0], ['swd', 1, 0], ['own', 2, 0], ['ins', 1, 0], ['sim', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ddc', 1, 0], ['photo', 0, 0], ['chk', 0, 0]);
+    R.push(['stnk', 1, 1], ['pkb', 1, 0], ['swd', 1, 0], ['own', 2, 0], ['ins', 1, 0], ['insack', 0, 0], ['sim', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ddc', 1, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (KIR_EXEMPT.indexOf(i.Type) < 0) R.push(['kir', 1, 1]);
     if (i.Type === 'Tanker truck') R.push(['b3', 2, 0]);
   } else {
     R.push(['silo', 1, 1], ['rep', 1, 1]);
     if (i.CertOutside === 'Yes') R.push(['end', 2, 0]); // certificate issued outside Sumatera Utara must be endorsed by Disnaker Sumut
-    R.push(['sio', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ins', 1, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
+    R.push(['sio', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ins', 1, 0], ['insack', 0, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (LIFT.indexOf(i.Type) >= 0) R.push(['rig', 1, 1]);
   }
   // Optional documents (not required for approval or fitness): commercial arrangements between the IC and its vendor.
@@ -278,6 +278,13 @@ function ruleStates(item, allDocs, today) {
     if (pend) { o.s = 'unverified'; o.docId = pend.DocID; return o; }
     o.docId = cur[0].DocID;
     o.s = cur[0].Verified === 'No' ? 'rejected' : 'expired';
+    return o;
+  }).map((o, n, arr) => {
+    // Alternative route: a HSSE-verified signed Insurance Responsibility Acknowledgement satisfies the insurance requirement (project-specific).
+    if (o.k === 'ins' && o.s !== 'ok') {
+      const a = arr.filter(x => x.k === 'insack')[0];
+      if (a && a.s === 'ok') { o.s = 'ok'; o.viaAck = true; o.docId = a.docId; o.pendingId = ''; }
+    }
     return o;
   });
 }
