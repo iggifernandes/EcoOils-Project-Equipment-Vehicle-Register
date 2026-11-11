@@ -1,5 +1,5 @@
-// VERSION 1.7.9 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.9';
+// VERSION 1.7.10 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.10';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -28,7 +28,7 @@ const KIR_EXEMPT = ['Light vehicle', 'Motorcycle'];
 const LIFT = ['Mobile crane', 'All-terrain crane', 'Rough-terrain crane', 'Truck-mounted crane / boom truck', 'Knuckle boom / loader crane', 'Pick and carry crane', 'Crawler crane', 'Mini / spider crane', 'Tower crane', 'Overhead / gantry crane', 'Telescopic handler (telehandler)', 'Pipelayer / side boom', 'Hoist / chain block'];
 const REINSPECT_DAYS = 30; // periodic (monthly) re-inspection interval: change here
 const MAX_AGE = { 'Vehicle': 5, 'Heavy Equipment': 10 }; // maximum age in years (IC HSSE requirement)
-const NA_OK = ['contain', 'elcb']; // checklist items that can be marked N/A (only where the equipment has no fuel / electrical panel)
+const NA_OK = ['contain', 'elcb', 'rev', 'chock', 'jack', 'ivms', 'cargo', 'cones', 'rotary', 'spark']; // checklist items HSSE may mark N/A where the item does not apply to that vehicle / equipment
 const INSP_KINDS = ['Pre-mobilisation', 'Site', 'Monthly'];
 function ageInfo(it) {
   const y = parseInt(it.YearMfg, 10), max = MAX_AGE[it.Category] || 10;
