@@ -1,5 +1,5 @@
-// VERSION 1.7.11 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.11';
+// VERSION 1.7.12 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.12';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -475,7 +475,7 @@ function approve(user, id, checklist, notes, kindIn) {
   needHSSE(user);
   const it = getItem(id), today = todayStr();
   if (['Submitted', 'Approved'].indexOf(it.Status) < 0) throw new Error('Entry is not submitted for inspection');
-  if (it.Status === 'Submitted' && it.SubmittedBy === user.email) throw new Error('A different HSSE user must approve an entry you submitted');
+  if (it.Status === 'Submitted' && it.SubmittedBy === user.email && String(user.email).toLowerCase() !== ADMIN_EMAIL.toLowerCase()) throw new Error('A different HSSE user must approve an entry you submitted');
   const docs = readAll('Documents', DOC_H).filter(d => isTrue(d.Current));
   const rs = ruleStates(it, docs, today), bad = rs.filter(r => !r.opt && r.s !== 'ok');
   if (bad.length) throw new Error('Cannot approve. ' + bad.map(r => (DOCL[r.k] || r.k) + ' (' + r.s + ')').join(', '));
