@@ -96,7 +96,7 @@ dialog.fs{width:100vw;max-width:100vw;height:100vh;max-height:100vh;margin:0}dia
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="fsb" id="fsb" onclick="toggleFs()" title="Full screen">&#x26F6; <span id="fst">Full screen</span></button><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.7.15';const NEED_BACKEND='1.7.15';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
+const VERSION='1.7.16';const NEED_BACKEND='1.7.15';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -215,7 +215,7 @@ async function load(){try{const r=await api('list');
 let flt={q:'',cat:'',st:'',co:''};
 function kpiGo(st){flt.st=st;flt.q='';flt.cat='';flt.co='';tab='register';render();}
 function viewRegister(){
-  const kp=[[t('total'),items.length,'',"kpiGo('')",!flt.st],[t('fit'),items.filter(i=>i.Fit==='FIT').length,'',"kpiGo('FIT')",flt.st==='FIT'],[t('pending'),items.filter(i=>i.Status==='Submitted'||pendingDocs(i)).length,'w',"go('approvals')",false],[t('expiring'),docs.filter(d=>{const n=daysLeft(d.Expiry);return d.Verified==='Yes'&&n!==null&&n>=0&&n<=30;}).length,'w',"go('alerts')",false],[t('expired'),items.filter(i=>i.Fit==='SUSPENDED'||i.Fit==='VOID').length,'r',"kpiGo('BAD')",flt.st==='BAD']];
+  const kp=[[t('total'),items.length,'',"kpiGo('')",!flt.st],[t('fit'),items.filter(i=>i.Fit==='FIT').length,'',"kpiGo('FIT')",flt.st==='FIT'],[t('pending'),items.filter(i=>i.Status==='Submitted'||pendingDocs(i)).length,'w',"go('approvals')",false],[t('expiring'),expDocs().filter(x=>x.n>=0).length,'w',"go('alerts')",false],[t('expired'),items.filter(i=>i.Fit==='SUSPENDED'||i.Fit==='VOID').length,'r',"kpiGo('BAD')",flt.st==='BAD']];
   const rows=items.filter(i=>(!flt.cat||i.Category===flt.cat)&&(!flt.st||(flt.st==='BAD'?(i.Fit==='SUSPENDED'||i.Fit==='VOID'):sl(i)===flt.st))&&(!flt.co||i.Company===flt.co)&&(!flt.q||JSON.stringify(i).toLowerCase().includes(flt.q.toLowerCase())));
   const sts=['FIT','SUSPENDED','VOID','Draft','Submitted','Rejected'];
   $('#app').innerHTML=msg(note.replace(/^!/,''),note.startsWith('!'))+`<div class="kpis">${kp.map(k=>`<div class="kpi ${k[2]} ${k[4]?'on':''}" role="button" tabindex="0" onclick="${k[3]}" onkeydown="if(event.key==='Enter')${k[3]}"><b>${k[1]}</b><span>${k[0]}</span></div>`).join('')}</div>
@@ -234,8 +234,9 @@ function folders(rows){const cos=COS.concat([...new Set(items.map(i=>i.Company))
     <h4>${LV} (${lv.length})</h4>${tbl(lv)}<h4>${HV} (${hv.length})</h4>${tbl(hv)}</details>`;}).join('');}
 function viewApprovals(){const p=items.filter(i=>i.Status==='Submitted'||pendingDocs(i));
   $('#app').innerHTML=`<div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('type')}</th><th>${t('plate')}</th><th>${t('company')}</th><th>${t('docs')}</th><th>${t('status')}</th></tr></thead><tbody>${p.map(i=>`<tr class="click" onclick="openItem('${esc(i.ID)}')"><td>${esc(i.ID)}</td><td>${esc(i.Type)}</td><td>${esc(i.PlateSerial)}</td><td>${esc(i.Company)}</td><td>${pendingDocs(i)} ${t('pending')}</td><td>${spill(i)}</td></tr>`).join('')||`<tr><td>${t('none')}</td></tr>`}</tbody></table></div>`;}
-function viewAlerts(){const rows=[];
-  items.filter(i=>i.Status==='Approved').forEach(i=>{i.Rules.forEach(r=>{const d=docs.find(x=>x.DocID===r.docId);if(d&&d.Expiry){const n=daysLeft(d.Expiry);if(n!==null&&n<=30)rows.push({i,w:t('d_'+r.k),date:d.Expiry,n});}});const n=daysLeft(i.NextInspection);if(n!==null&&n<=30)rows.push({i,w:t('nextinsp'),date:i.NextInspection,n});});
+function expDocs(){const out=[];docs.forEach(d=>{if(d.Verified!=='Yes'||!d.Expiry)return;const n=daysLeft(d.Expiry);if(n===null||n>30)return;const it=items.find(x=>x.ID===d.ItemID);if(it)out.push({i:it,w:t('d_'+d.DocType),date:d.Expiry,n});});return out;}
+function viewAlerts(){const rows=expDocs();
+  items.filter(i=>i.Status==='Approved').forEach(i=>{const n=daysLeft(i.NextInspection);if(n!==null&&n<=30)rows.push({i,w:t('nextinsp'),date:i.NextInspection,n});});
   rows.sort((a,b)=>a.n-b.n);
   $('#app').innerHTML=`<div class="tw"><table><thead><tr><th>${t('id')}</th><th>${t('plate')}</th><th>${t('company')}</th><th>${t('docs')}</th><th>${t('expiry')}</th></tr></thead><tbody>${rows.map(x=>`<tr class="click" onclick="openItem('${esc(x.i.ID)}')"><td>${esc(x.i.ID)}</td><td>${esc(x.i.PlateSerial)}</td><td>${esc(x.i.Company)}</td><td>${esc(x.w)}</td><td>${dpill(x.date)}</td></tr>`).join('')||`<tr><td colspan="5">${t('none')}</td></tr>`}</tbody></table></div>`;}
 function exportCsv(){const h=['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','Status','Fit','LocationStatus','NextInspection'];const csv=[h.join(',')].concat(items.map(i=>h.map(k=>'"'+String(i[k]||'').replace(/"/g,'""')+'"').join(','))).join('\n');
