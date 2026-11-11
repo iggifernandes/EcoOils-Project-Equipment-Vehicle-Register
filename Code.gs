@@ -1,5 +1,5 @@
-// VERSION 1.7.14 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.14';
+// VERSION 1.7.15 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.15';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -110,6 +110,7 @@ function doPost(e) {
         case 'withdrawDoc':    return out(withdrawDoc(user, r.docId));
         case 'requestRemoval': return out(requestRemoval(user, r.docId, r.reason));
         case 'voidDoc':        return out(voidDoc(user, r.docId, r.reason));
+        case 'reconsiderDoc':  return out(reconsiderDoc(user, r.docId));
         case 'declineRemoval': return out(declineRemoval(user, r.docId));
         case 'moveDoc':        return out(moveDoc(user, r.docId, r.toItemId));
         case 'approve':        return out(approve(user, r.itemId, r.checklist, r.notes, r.kind));
@@ -491,6 +492,16 @@ function voidDoc(user, docId, reason) {
   d.Current = 'FALSE'; d.RemoveReq = ''; d.Note = (d.Note ? d.Note + ' | ' : '') + 'Voided by ' + user.email + ' ' + iso() + ': ' + reason;
   writeRow('Documents', DOC_H, d);
   audit(user, 'voidDoc', it.ID, d.DocType + ' ' + docId + ': ' + reason);
+  return { ok: true };
+}
+// Undo a rejection made by mistake: the document goes back to 'To verify' so HSSE can verify or reject it again.
+function reconsiderDoc(user, docId) {
+  needHSSE(user);
+  const d = getDocRow(docId);
+  if (!isTrue(d.Current) || d.Verified !== 'No') throw new Error('Only a current, rejected document can be reconsidered');
+  d.Verified = ''; d.VerifiedBy = ''; d.VerifiedAt = ''; d.Note = (d.Note ? d.Note + ' | ' : '') + 'Rejection reconsidered by ' + user.email + ' ' + iso();
+  writeRow('Documents', DOC_H, d);
+  audit(user, 'reconsiderDoc', d.ItemID, d.DocType + ' ' + docId);
   return { ok: true };
 }
 function declineRemoval(user, docId) {
