@@ -1,11 +1,11 @@
-// VERSION 1.7.12 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.12';
+// VERSION 1.7.14 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.14';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
 
 const EQ_H = ['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','OperatorLicenceClass','Status','LocationStatus','NextInspection','DecisionNote','Remarks','SubmittedBy','SubmittedAt','DecidedBy','DecidedAt','UpdatedAt','YearMfg','CertOutside','AgeOverride'];
-const DOC_H = ['DocID','ItemID','DocType','Number','Expiry','FileName','FileId','UploadedBy','UploadedAt','Verified','VerifiedBy','VerifiedAt','Note','Current'];
+const DOC_H = ['DocID','ItemID','DocType','Number','Expiry','FileName','FileId','UploadedBy','UploadedAt','Verified','VerifiedBy','VerifiedAt','Note','Current','RemoveReq'];
 const ST_H = ['StickerNo','ItemID','Token','IssuedAt','IssuedBy','Status','PrintCount','PrintedAt','PrintedBy','ReprintAllowed','ReprintReason','VoidReason','VoidedBy','VoidedAt'];
 const IN_H = ['InspID','ItemID','Date','Inspector','Kind','Result','Checklist','Notes'];
 const AU_H = ['Time','User','Action','ItemID','Detail'];
@@ -107,6 +107,11 @@ function doPost(e) {
         case 'uploadDoc':      return out(uploadDoc(user, r));
         case 'getFile':        return out(getFile(user, r.docId));
         case 'verifyDoc':      return out(verifyDoc(user, r.docId, r.result, r.note));
+        case 'withdrawDoc':    return out(withdrawDoc(user, r.docId));
+        case 'requestRemoval': return out(requestRemoval(user, r.docId, r.reason));
+        case 'voidDoc':        return out(voidDoc(user, r.docId, r.reason));
+        case 'declineRemoval': return out(declineRemoval(user, r.docId));
+        case 'moveDoc':        return out(moveDoc(user, r.docId, r.toItemId));
         case 'approve':        return out(approve(user, r.itemId, r.checklist, r.notes, r.kind));
         case 'ageOverride':    return out(ageOverride(user, r.itemId, r.reason));
         case 'reject':         return out(reject(user, r.itemId, r.note));
@@ -311,7 +316,7 @@ function listAll(user) {
     o.Fit = f.state; o.FitWhy = f.why; o.Rules = ruleStates(i, docsAll, today); o.Check = inspItems(i);
     return o;
   });
-  const docs = docsAll.filter(d => ids[d.ItemID]).map(d => ({ DocID: d.DocID, ItemID: d.ItemID, DocType: d.DocType, Number: user.role === 'Viewer' ? '' : d.Number, Expiry: d.Expiry, FileName: d.FileName, UploadedBy: d.UploadedBy, UploadedAt: d.UploadedAt, Verified: d.Verified, VerifiedBy: d.VerifiedBy, Note: d.Note }));
+  const docs = docsAll.filter(d => ids[d.ItemID]).map(d => ({ DocID: d.DocID, ItemID: d.ItemID, DocType: d.DocType, Number: user.role === 'Viewer' ? '' : d.Number, Expiry: d.Expiry, FileName: d.FileName, UploadedBy: d.UploadedBy, UploadedAt: d.UploadedAt, Verified: d.Verified, VerifiedBy: d.VerifiedBy, Note: d.Note, RemoveReq: d.RemoveReq || '' }));
   const stickers = readAll('Stickers', ST_H).filter(s => ids[s.ItemID]).map(s => ({ StickerNo: s.StickerNo, ItemID: s.ItemID, Token: user.role === 'HSSE' ? s.Token : '', IssuedAt: s.IssuedAt, Status: s.Status, PrintCount: Number(s.PrintCount) || 0, ReprintAllowed: isTrue(s.ReprintAllowed), PrintedAt: s.PrintedAt, PrintedBy: s.PrintedBy }));
   return { ok: true, user: user, items: outItems, docs: docs, stickers: stickers, ver: VERSION };
 }
@@ -432,14 +437,82 @@ function uploadDoc(user, p) {
   const safe = String(p.fileName || 'file').replace(/[^\w.\-]+/g, '_').slice(0, 60);
   const docId = 'D-' + Utilities.getUuid().slice(0, 8), now = iso();
   const file = itemFolder(it.ID, it.Company, it.Category).createFile(Utilities.newBlob(bytes, p.mime, it.ID + '_' + p.docType + '_' + docId + '_' + safe));
+  let replacedPending = false;
   if (p.docType !== 'photo') { // older rows that were never verified are replaced; a verified one stays until the new one is verified
     readAll('Documents', DOC_H).forEach(d => {
-      if (d.ItemID === it.ID && d.DocType === p.docType && isTrue(d.Current) && d.Verified !== 'Yes') { d.Current = 'FALSE'; writeRow('Documents', DOC_H, d); }
+      if (d.ItemID === it.ID && d.DocType === p.docType && isTrue(d.Current) && d.Verified !== 'Yes') { replacedPending = true; d.Current = 'FALSE'; writeRow('Documents', DOC_H, d); }
     });
   }
   addRow('Documents', DOC_H, { DocID: docId, ItemID: it.ID, DocType: p.docType, Number: String(p.number || '').trim(), Expiry: p.expiry || '', FileName: safe, FileId: file.getId(), UploadedBy: user.email, UploadedAt: now, Verified: '', Note: noteTxt, Current: 'TRUE' });
   audit(user, 'upload', it.ID, p.docType + ' ' + docId);
+  if (replacedPending && it.Status === 'Submitted' && user.role !== 'HSSE') alertHSSE('Document replaced during inspection wait: ' + it.ID + ' | ' + (it.Company || ''), user.email + ' replaced a pending ' + (DOCL[p.docType] || p.docType) + ' upload on ' + it.ID + ' (' + (it.PlateSerial || '') + '), which is already submitted for inspection.');
   return { ok: true, docId: docId };
+}
+
+// ---------- document corrections: withdraw (pending only), request removal (verified), HSSE void / decline / move ----------
+// Nothing is hard-deleted: the row stays with Current = FALSE, the Drive file stays, and the audit log records who / when / why.
+function alertHSSE(subject, body) {
+  try { sendMail(INSPECTION_ALERT_TO.join(','), subject, body); } catch (e) { console.log('Alert failed: ' + e); }
+}
+function getDocRow(docId) {
+  const d = readAll('Documents', DOC_H).filter(x => x.DocID === docId)[0];
+  if (!d) throw new Error('Document not found');
+  return d;
+}
+function withdrawDoc(user, docId) {
+  const d = getDocRow(docId), it = getItem(d.ItemID);
+  if (!canWork(user, it)) throw new Error('Not allowed');
+  if (!isTrue(d.Current)) throw new Error('This document is no longer current');
+  if (d.Verified === 'Yes') throw new Error('A verified document cannot be withdrawn. Upload a corrected one, or request removal.');
+  if (it.Status === 'Submitted' && user.role !== 'HSSE') throw new Error('This entry is with HSSE for inspection. Upload a replacement instead of withdrawing.');
+  d.Current = 'FALSE'; d.Note = (d.Note ? d.Note + ' | ' : '') + 'Withdrawn by ' + user.email + ' ' + iso();
+  writeRow('Documents', DOC_H, d);
+  audit(user, 'withdrawDoc', it.ID, d.DocType + ' ' + docId);
+  if (it.Status === 'Approved') alertHSSE('Document withdrawn: ' + it.ID + ' | ' + (it.Company || ''), user.email + ' withdrew a pending ' + (DOCL[d.DocType] || d.DocType) + ' upload on approved entry ' + it.ID + ' (' + (it.PlateSerial || '') + '). Any verified document is unaffected.');
+  return { ok: true };
+}
+function requestRemoval(user, docId, reason) {
+  const d = getDocRow(docId), it = getItem(d.ItemID);
+  if (!canWork(user, it)) throw new Error('Not allowed');
+  if (!isTrue(d.Current) || d.Verified !== 'Yes') throw new Error('Only a verified document needs a removal request');
+  reason = String(reason || '').trim();
+  if (!reason) throw new Error('Give a reason for the removal request');
+  d.RemoveReq = reason + ' | ' + user.email + ' | ' + iso();
+  writeRow('Documents', DOC_H, d);
+  audit(user, 'requestRemoval', it.ID, d.DocType + ' ' + docId + ': ' + reason);
+  alertHSSE('Document removal requested: ' + it.ID + ' | ' + (it.Company || ''), user.email + ' asks to remove the verified ' + (DOCL[d.DocType] || d.DocType) + ' on ' + it.ID + ' (' + (it.PlateSerial || '') + ').\nReason: ' + reason + '\n\nOpen the entry in the Register to void it or decline the request. Until you act, the document stays valid.');
+  return { ok: true };
+}
+function voidDoc(user, docId, reason) {
+  needHSSE(user);
+  const d = getDocRow(docId), it = getItem(d.ItemID);
+  reason = String(reason || '').trim();
+  if (!reason) throw new Error('Give a reason for voiding the document');
+  d.Current = 'FALSE'; d.RemoveReq = ''; d.Note = (d.Note ? d.Note + ' | ' : '') + 'Voided by ' + user.email + ' ' + iso() + ': ' + reason;
+  writeRow('Documents', DOC_H, d);
+  audit(user, 'voidDoc', it.ID, d.DocType + ' ' + docId + ': ' + reason);
+  return { ok: true };
+}
+function declineRemoval(user, docId) {
+  needHSSE(user);
+  const d = getDocRow(docId);
+  d.RemoveReq = ''; writeRow('Documents', DOC_H, d);
+  audit(user, 'declineRemoval', d.ItemID, d.DocType + ' ' + docId);
+  return { ok: true };
+}
+// Move a document uploaded to the wrong entry. It must be re-verified on the new entry (Verified reset), so nothing is trusted by default.
+function moveDoc(user, docId, toItemId) {
+  needHSSE(user);
+  const d = getDocRow(docId), from = getItem(d.ItemID), to = getItem(String(toItemId || '').trim());
+  if (!to) throw new Error('Target entry not found');
+  if (to.ID === from.ID) throw new Error('Choose a different entry');
+  if (!docRules(to).filter(r => r.k === d.DocType)[0]) throw new Error('The target entry does not use this document type');
+  try { DriveApp.getFileById(d.FileId).moveTo(itemFolder(to.ID, to.Company, to.Category)); } catch (e) { console.log('Drive move failed: ' + e); }
+  if (d.DocType !== 'photo') readAll('Documents', DOC_H).forEach(o => { if (o.ItemID === to.ID && o.DocType === d.DocType && isTrue(o.Current) && o.DocID !== d.DocID) { o.Current = 'FALSE'; writeRow('Documents', DOC_H, o); } });
+  d.ItemID = to.ID; d.Verified = ''; d.VerifiedBy = ''; d.VerifiedAt = ''; d.RemoveReq = ''; d.Note = (d.Note ? d.Note + ' | ' : '') + 'Moved from ' + from.ID + ' by ' + user.email + ' ' + iso();
+  writeRow('Documents', DOC_H, d);
+  audit(user, 'moveDoc', to.ID, d.DocType + ' ' + docId + ' from ' + from.ID);
+  return { ok: true };
 }
 
 function getFile(user, docId) {
