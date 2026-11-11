@@ -1,5 +1,5 @@
-// VERSION 1.7.10 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.10';
+// VERSION 1.7.11 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.11';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -18,6 +18,7 @@ const REMIND_LONG = [60, 30, 14, 7, 3, 0]; // documents that take weeks to renew
 const LONG_LEAD = ['silo', 'rep', 'sio', 'kir', 'sim', 'stnk', 'swd']; // SILO, PJK3 report, operator SIO, KIR, SIM, STNK
 const EXPIRED_EVERY_DAYS = 3;          // after expiry the reminder repeats every 3 days
 const MAIL_NAME = 'EcoOils HSSE | Heavy Equipment & Vehicle Register';
+const INSPECTION_ALERT_TO = ['Ignatius.Ambrosio@ecooils.com.my']; // who is emailed when an entry is submitted for inspection (add more addresses here)
 const MAIL_FROM = ADMIN_EMAIL;         // shown as the sender when it is a verified Gmail "Send mail as" alias, otherwise used as Reply-To
 const USER_H = ['Email','Name','Role','Company','Active','Salt','Hash'];
 
@@ -102,7 +103,7 @@ function doPost(e) {
         case 'saveItem':       return out(saveItem(user, r.item));
         case 'setLocation':    return out(setLocation(user, r.itemId, r.location));
         case 'deleteItem':     return out(deleteItem(user, r.itemId, r.pin, r.reason));
-        case 'submit':         return out(submitItem(user, r.itemId));
+        case 'submit':         return out(submitItem(user, r.itemId, r.confirmed));
         case 'uploadDoc':      return out(uploadDoc(user, r));
         case 'getFile':        return out(getFile(user, r.docId));
         case 'verifyDoc':      return out(verifyDoc(user, r.docId, r.result, r.note));
@@ -376,7 +377,8 @@ function setLocation(user, id, loc) {
   return { ok: true };
 }
 
-function submitItem(user, id) {
+function submitItem(user, id, confirmed) {
+  if (confirmed !== true) throw new Error('Confirm that the attached documents have been checked before submitting');
   const it = getItem(id);
   if (!canWork(user, it)) throw new Error('Not allowed');
   if (['Draft', 'Rejected', 'Void'].indexOf(it.Status) < 0) throw new Error('Already submitted');
@@ -386,6 +388,11 @@ function submitItem(user, id) {
   it.Status = 'Submitted'; it.SubmittedBy = user.email; it.SubmittedAt = iso(); it.DecisionNote = ''; it.UpdatedAt = iso();
   writeRow('Equipment', EQ_H, it);
   audit(user, 'submit', id, '');
+  try { // alert EcoOils HSSE that an entry is ready for inspection; a mail failure never blocks the submission
+    sendMail(INSPECTION_ALERT_TO.join(','), 'Inspection requested: ' + id + ' | ' + (it.Company || '') + ' | ' + (it.PlateSerial || ''),
+      'An entry has been submitted for HSSE inspection.\n\nID: ' + id + '\nCompany: ' + (it.Company || '') + '\nType: ' + (it.Type || '') + ' ' + (it.MakeModel || '') + '\nPlate / serial: ' + (it.PlateSerial || '') +
+      '\nSubmitted by: ' + user.email + '\nTime: ' + iso() + '\n\nThe submitter has confirmed that the attached documents were checked. Open the Heavy Equipment & Vehicle Register > To verify to review and arrange the inspection.');
+  } catch (e) { console.log('Inspection alert failed: ' + e); }
   return { ok: true };
 }
 
