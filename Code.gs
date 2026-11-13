@@ -1,5 +1,5 @@
-// VERSION 1.7.19 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.19';
+// VERSION 1.7.22 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.22';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -93,6 +93,7 @@ function doPost(e) {
       case 'setPin':       return out(setPin(r.email, r.code, r.pin));
       case 'login':        return out(login(r.email, r.pin, r.keep));
       case 'verify':       return out(verifyPublic(r.id, r.t));
+      case 'verifyTraining': return out(verifyTraining(r.id, r.t));
       case 'logout':       return out(logout(r.token));
     }
     const user = auth(r.token);
@@ -809,7 +810,7 @@ function sendReminders() {
 
 
 // ---------- DRIVER TRAINING (defensive driving, No Flagman No Movement, Life-Saving Rules) ----------
-const TRAIN_H = ['TrainID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Score', 'Total', 'Passed', 'Lang', 'Signature', 'RecordedBy', 'ValidUntil'];
+const TRAIN_H = ['TrainID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Score', 'Total', 'Passed', 'Lang', 'Signature', 'RecordedBy', 'ValidUntil', 'Photo', 'Token'];
 const WARN_H = ['WarnID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Violation', 'Level', 'Details', 'IssuedBy', 'Status', 'WithdrawnReason', 'WithdrawnBy'];
 // Correct option index for each of the 10 quiz questions (the page holds the questions; the answer key stays here).
 const QUIZ_KEY = [1, 2, 3, 0, 2, 1, 1, 0, 2, 2];
@@ -841,19 +842,29 @@ function saveTraining(user, p) {
   if (!name) throw new Error('Driver name is required');
   if (!/^\d{12,16}$/.test(String(p.driverId || '').trim()) && String(p.driverId || '').trim()) throw new Error('SIM / KTP number must be digits only, 12 to 16 digits');
   if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(String(p.signature || '')) || p.signature.length > 45000) throw new Error('Signature is required');
+  if (!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(String(p.photo || '')) || p.photo.length > 45000) throw new Error('A selfie photo of the driver is required');
   if (p.agreed !== true) throw new Error('The driver must accept the declaration');
   const g = gradeAnswers(p.answers);
   if (!g.passed) throw new Error('Quiz not passed (' + g.score + '/' + g.total + ')');
   tsheet('Training', TRAIN_H);
   const id = 'T-' + Utilities.getUuid().slice(0, 8), co = trainCompany(user, p);
-  addRow('Training', TRAIN_H, { TrainID: id, Time: iso(), Company: co, DriverName: name, DriverID: String(p.driverId || '').trim(), ItemID: p.itemId || '', Plate: p.plate || '', Score: g.score, Total: g.total, Passed: 'Yes', Lang: p.lang || '', Signature: p.signature, RecordedBy: user.email, ValidUntil: plusDays(TRAIN_VALID_DAYS) });
+  addRow('Training', TRAIN_H, { TrainID: id, Time: iso(), Company: co, DriverName: name, DriverID: String(p.driverId || '').trim(), ItemID: p.itemId || '', Plate: p.plate || '', Score: g.score, Total: g.total, Passed: 'Yes', Lang: p.lang || '', Signature: p.signature, RecordedBy: user.email, ValidUntil: plusDays(TRAIN_VALID_DAYS), Photo: p.photo, Token: Utilities.getUuid().replace(/-/g, '').slice(0, 10).toUpperCase() });
   audit(user, 'training', id, name + ' ' + g.score + '/' + g.total);
   return { ok: true, trainId: id };
+}
+// Public QR check for a driver training certificate: name, company, dates, selfie. No ID numbers.
+function verifyTraining(id, tok) {
+  if (!id || !tok) throw new Error('Invalid QR code');
+  tsheet('Training', TRAIN_H);
+  const r = readAll('Training', TRAIN_H).filter(x => x.TrainID === id && x.Token === tok)[0];
+  if (!r) throw new Error('Invalid QR code');
+  const exp = r.ValidUntil || '';
+  return { ok: true, v: { TrainID: r.TrainID, DriverName: r.DriverName, Company: r.Company, Date: String(r.Time || '').slice(0, 10), ValidUntil: exp, Score: r.Score, Total: r.Total, Photo: r.Photo || '', Valid: r.Passed === 'Yes' && exp >= todayStr() } };
 }
 function canSeeCo(user, co) { return user.role === 'HSSE' || user.role === 'Viewer' || user.role === 'Inspector' || (user.role === 'IC' && norm(co) === norm(user.company)); }
 function listTraining(user) {
   tsheet('Training', TRAIN_H);
-  const rows = readAll('Training', TRAIN_H).filter(r => canSeeCo(user, r.Company)).map(r => { const o = strip(r); o.HasSig = !!o.Signature; delete o.Signature; return o; });
+  const rows = readAll('Training', TRAIN_H).filter(r => canSeeCo(user, r.Company)).map(r => { const o = strip(r); o.HasSig = !!o.Signature; delete o.Signature; delete o.Photo; delete o.Token; return o; });
   rows.sort((a, b) => a.Time < b.Time ? 1 : -1);
   return { ok: true, training: rows };
 }

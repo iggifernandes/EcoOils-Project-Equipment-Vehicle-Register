@@ -103,7 +103,7 @@ dialog.fs{width:100vw;max-width:100vw;height:100vh;max-height:100vh;margin:0}dia
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="fsb" id="fsb" onclick="toggleFs()" title="Full screen">&#x26F6; <span id="fst">Full screen</span></button><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.7.21';const NEED_BACKEND='1.7.19';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
+const VERSION='1.7.22';const NEED_BACKEND='1.7.22';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -124,7 +124,7 @@ FIT:'FIT',SUSPENDED:'SUSPENDED',VOID:'VOID','NOT APPROVED':'NOT APPROVED',Draft:
 missing:'Missing',unverified:'To verify',ok:'Verified',rejected:'Rejected',expired:'Expired',
 upload:'Upload / renew',docname:'Document',validity:'Valid until',view:'View',verifyyes:'Verify',verifyno:'Reject',number:'Document no.',expiry:'Expiry date',note:'Note',file:'File (PDF, JPG, PNG)',doUpload:'Upload',docnote:'Renewals stay pending until HSSE verifies them; the current verified document stays valid until then.',
 submit:'Submit to HSSE for inspection',submitted:'Submitted.',saved:'Saved.',uploaded:'Uploaded.',none:'Nothing to show.',export:'Export CSV',print:'Print',days:'days',
-recpass:'Record inspection: PASSED',recfail:'Record: NOT passed',rechint:'Your result is sent to the HSSE Manager, who approves the entry and issues the sticker.',recreason:'Write the reason in the inspection notes',recdone:'Inspection recorded',inspby:'Inspection passed by',inspfail:'Inspection NOT passed by',pick:'Select a vehicle from the list',trprev:'Preview training (nothing is recorded)',trprevtag:'PREVIEW - no record',trprevdone:'Preview complete. Nothing was recorded. Score:',trprevback:'Back to training',insp:'Physical inspection (HSSE)',inspnotes:'Inspection notes',approve:'Approve & issue sticker',reinsp:'Pass re-inspection',reject:'Return to contractor',rejreason:'Reason for returning:',
+recpass:'Record inspection: PASSED',recfail:'Record: NOT passed',rechint:'Your result is sent to the HSSE Manager, who approves the entry and issues the sticker.',recreason:'Write the reason in the inspection notes',recdone:'Inspection recorded',inspby:'Inspection passed by',inspfail:'Inspection NOT passed by',pick:'Select a vehicle from the list',trprev:'Preview training (nothing is recorded)',trprevtag:'PREVIEW - no record',trprevdone:'Preview complete. Nothing was recorded. Score:',trprevback:'Back to training',trselfie:'Driver selfie (face clearly visible)',trselfieerr:'Take or choose a selfie of the driver',trvvalid:'TRAINING VALID',trvexp:'TRAINING EXPIRED',trvno:'Certificate no.',insp:'Physical inspection (HSSE)',inspnotes:'Inspection notes',approve:'Approve & issue sticker',reinsp:'Pass re-inspection',reject:'Return to contractor',rejreason:'Reason for returning:',
 stk:'Inspection sticker',preview:'Preview sticker',printstk:'Print sticker (once)',printconfirm:'The sticker can be printed ONLY ONCE. Continue?',printed:'Printed',notprinted:'Not printed yet',reprint:'Authorise reprint',reprintreason:'Reason for reprint (lost, damaged, misprint):',voidit:'Void inspection (damage found)',voidreason:'Describe the damage or defect found:',
 toobig:'File must be under 3.5 MB',badtype:'Use PDF, JPG or PNG',
 cs:'Reminder contacts',csnote:'Logistics, HR and HSSE contacts of each company receive expiry reminders for approvals and vehicle documents, together with the EcoOils HSSE contacts.',name:'Name',role:'Role',add2:'Add contact',remove:'Remove',sendnow:'Send reminders now',sentn:'Reminder emails sent:',
@@ -137,7 +137,7 @@ FIT:'LAYAK',SUSPENDED:'DITANGGUHKAN',VOID:'BATAL','NOT APPROVED':'BELUM DISETUJU
 missing:'Belum ada',unverified:'Perlu verifikasi',ok:'Terverifikasi',rejected:'Ditolak',expired:'Kedaluwarsa',
 upload:'Unggah / perbarui',docname:'Dokumen',validity:'Berlaku s/d',view:'Lihat',verifyyes:'Verifikasi',verifyno:'Tolak',number:'No. dokumen',expiry:'Tanggal kedaluwarsa',note:'Catatan',file:'Berkas (PDF, JPG, PNG)',doUpload:'Unggah',docnote:'Pembaruan menunggu verifikasi HSSE; dokumen terverifikasi saat ini tetap berlaku sampai saat itu.',
 submit:'Ajukan ke HSSE untuk inspeksi',submitted:'Diajukan.',saved:'Tersimpan.',uploaded:'Terunggah.',none:'Tidak ada data.',export:'Ekspor CSV',print:'Cetak',days:'hari',
-recpass:'Catat inspeksi: LULUS',recfail:'Catat: TIDAK lulus',rechint:'Hasil Anda dikirim ke HSSE Manager, yang menyetujui dan menerbitkan stiker.',recreason:'Tulis alasannya di catatan inspeksi',recdone:'Inspeksi dicatat',inspby:'Inspeksi lulus oleh',inspfail:'Inspeksi TIDAK lulus oleh',pick:'Pilih kendaraan dari daftar',trprev:'Pratinjau pelatihan (tidak dicatat)',trprevtag:'PRATINJAU - tidak dicatat',trprevdone:'Pratinjau selesai. Tidak ada yang dicatat. Nilai:',trprevback:'Kembali ke pelatihan',insp:'Inspeksi fisik (HSSE)',inspnotes:'Catatan inspeksi',approve:'Setujui & terbitkan stiker',reinsp:'Lulus inspeksi ulang',reject:'Kembalikan ke kontraktor',rejreason:'Alasan pengembalian:',
+recpass:'Catat inspeksi: LULUS',recfail:'Catat: TIDAK lulus',rechint:'Hasil Anda dikirim ke HSSE Manager, yang menyetujui dan menerbitkan stiker.',recreason:'Tulis alasannya di catatan inspeksi',recdone:'Inspeksi dicatat',inspby:'Inspeksi lulus oleh',inspfail:'Inspeksi TIDAK lulus oleh',pick:'Pilih kendaraan dari daftar',trprev:'Pratinjau pelatihan (tidak dicatat)',trprevtag:'PRATINJAU - tidak dicatat',trprevdone:'Pratinjau selesai. Tidak ada yang dicatat. Nilai:',trprevback:'Kembali ke pelatihan',trselfie:'Swafoto pengemudi (wajah jelas)',trselfieerr:'Ambil atau pilih swafoto pengemudi',trvvalid:'PELATIHAN BERLAKU',trvexp:'PELATIHAN KEDALUWARSA',trvno:'No. sertifikat',insp:'Inspeksi fisik (HSSE)',inspnotes:'Catatan inspeksi',approve:'Setujui & terbitkan stiker',reinsp:'Lulus inspeksi ulang',reject:'Kembalikan ke kontraktor',rejreason:'Alasan pengembalian:',
 stk:'Stiker inspeksi',preview:'Pratinjau stiker',printstk:'Cetak stiker (sekali)',printconfirm:'Stiker HANYA dapat dicetak SATU KALI. Lanjutkan?',printed:'Sudah dicetak',notprinted:'Belum dicetak',reprint:'Izinkan cetak ulang',reprintreason:'Alasan cetak ulang (hilang, rusak, salah cetak):',voidit:'Batalkan inspeksi (ada kerusakan)',voidreason:'Jelaskan kerusakan atau cacat yang ditemukan:',
 toobig:'Berkas harus di bawah 3,5 MB',badtype:'Gunakan PDF, JPG atau PNG',
 cs:'Kontak pengingat',csnote:'Kontak Logistik, HR dan HSSE tiap perusahaan menerima pengingat kedaluwarsa persetujuan dan dokumen kendaraan, bersama kontak HSSE EcoOils.',name:'Nama',role:'Peran',add2:'Tambah kontak',remove:'Hapus',sendnow:'Kirim pengingat sekarang',sentn:'Email pengingat terkirim:',
@@ -150,7 +150,7 @@ FIT:'LAYAK',SUSPENDED:'DIGANTUNG',VOID:'BATAL','NOT APPROVED':'BELUM DILULUSKAN'
 missing:'Tiada',unverified:'Perlu pengesahan',ok:'Disahkan',rejected:'Ditolak',expired:'Tamat tempoh',
 upload:'Muat naik / perbaharui',docname:'Dokumen',validity:'Sah sehingga',view:'Lihat',verifyyes:'Sahkan',verifyno:'Tolak',number:'No. dokumen',expiry:'Tarikh tamat',note:'Catatan',file:'Fail (PDF, JPG, PNG)',doUpload:'Muat naik',docnote:'Pembaharuan menunggu pengesahan HSSE; dokumen sah semasa kekal sah sehingga itu.',
 submit:'Hantar ke HSSE untuk pemeriksaan',submitted:'Dihantar.',saved:'Disimpan.',uploaded:'Dimuat naik.',none:'Tiada data.',export:'Eksport CSV',print:'Cetak',days:'hari',
-recpass:'Rekod pemeriksaan: LULUS',recfail:'Rekod: TIDAK lulus',rechint:'Keputusan anda dihantar kepada HSSE Manager, yang meluluskan dan mengeluarkan pelekat.',recreason:'Tulis sebabnya dalam catatan pemeriksaan',recdone:'Pemeriksaan direkod',inspby:'Pemeriksaan lulus oleh',inspfail:'Pemeriksaan TIDAK lulus oleh',pick:'Pilih kenderaan dari senarai',trprev:'Pratonton latihan (tiada rekod)',trprevtag:'PRATONTON - tiada rekod',trprevdone:'Pratonton selesai. Tiada rekod disimpan. Skor:',trprevback:'Kembali ke latihan',insp:'Pemeriksaan fizikal (HSSE)',inspnotes:'Catatan pemeriksaan',approve:'Lulus & keluarkan pelekat',reinsp:'Lulus pemeriksaan semula',reject:'Pulangkan kepada kontraktor',rejreason:'Sebab dipulangkan:',
+recpass:'Rekod pemeriksaan: LULUS',recfail:'Rekod: TIDAK lulus',rechint:'Keputusan anda dihantar kepada HSSE Manager, yang meluluskan dan mengeluarkan pelekat.',recreason:'Tulis sebabnya dalam catatan pemeriksaan',recdone:'Pemeriksaan direkod',inspby:'Pemeriksaan lulus oleh',inspfail:'Pemeriksaan TIDAK lulus oleh',pick:'Pilih kenderaan dari senarai',trprev:'Pratonton latihan (tiada rekod)',trprevtag:'PRATONTON - tiada rekod',trprevdone:'Pratonton selesai. Tiada rekod disimpan. Skor:',trprevback:'Kembali ke latihan',trselfie:'Swafoto pemandu (muka jelas)',trselfieerr:'Ambil atau pilih swafoto pemandu',trvvalid:'LATIHAN SAH',trvexp:'LATIHAN TAMAT TEMPOH',trvno:'No. sijil',insp:'Pemeriksaan fizikal (HSSE)',inspnotes:'Catatan pemeriksaan',approve:'Lulus & keluarkan pelekat',reinsp:'Lulus pemeriksaan semula',reject:'Pulangkan kepada kontraktor',rejreason:'Sebab dipulangkan:',
 stk:'Pelekat pemeriksaan',preview:'Pratonton pelekat',printstk:'Cetak pelekat (sekali)',printconfirm:'Pelekat HANYA boleh dicetak SEKALI. Teruskan?',printed:'Sudah dicetak',notprinted:'Belum dicetak',reprint:'Benarkan cetak semula',reprintreason:'Sebab cetak semula (hilang, rosak, salah cetak):',voidit:'Batalkan pemeriksaan (ada kerosakan)',voidreason:'Terangkan kerosakan atau kecacatan yang ditemui:',
 toobig:'Fail mesti di bawah 3.5 MB',badtype:'Gunakan PDF, JPG atau PNG',
 cs:'Kenalan peringatan',csnote:'Kenalan Logistik, HR dan HSSE setiap syarikat menerima peringatan tamat tempoh kelulusan dan dokumen kenderaan, bersama kenalan HSSE EcoOils.',name:'Nama',role:'Peranan',add2:'Tambah kenalan',remove:'Buang',sendnow:'Hantar peringatan sekarang',sentn:'E-mel peringatan dihantar:',
@@ -162,7 +162,7 @@ let lang=localStorage.getItem('evr_lang')||'en',tab='register',items=[],docs=[],
 const $=s=>document.querySelector(s),t=k=>(T[lang][k]||T.en[k]||k);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dlg=$('#dlg'),isHSSE=()=>user&&user.role==='HSSE',isInsp=()=>user&&user.role==='Inspector',canWork=()=>user&&(user.role==='HSSE'||user.role==='IC');
-const P=new URLSearchParams(location.search),VERIFY=P.get('v')?{id:P.get('v'),t:P.get('t')}:null;
+const P=new URLSearchParams(location.search),VERIFY=P.get('v')?{id:P.get('v'),t:P.get('t')}:P.get('c')?{c:1,id:P.get('c'),t:P.get('t')}:null;
 
 async function api(action,p={}){
   if(!API_URL)throw new Error(t('noapi'));
@@ -466,7 +466,7 @@ const VL={en:{nofm:'Moved without a flagman',spd:'Speeding',phone:'Phone use whi
 id:{nofm:'Bergerak tanpa flagman',spd:'Melebihi kecepatan',phone:'Telepon saat mengemudi',belt:'Tanpa sabuk pengaman',susp:'Di bawah / zona beban menggantung',lof:'Pelanggaran garis tembak',alc:'Alkohol atau narkoba',jmp:'Tanpa rencana perjalanan',other:'Lainnya'},
 ms:{nofm:'Bergerak tanpa flagman',spd:'Memandu laju',phone:'Guna telefon semasa memandu',belt:'Tiada tali pinggang keledar',susp:'Di bawah / zon beban tergantung',lof:'Pelanggaran garis tembakan',alc:'Alkohol atau dadah',jmp:'Tiada pelan perjalanan',other:'Lain-lain'}};
 let tr={step:'start',name:'',did:'',plate:'',co:'',les:0,ans:[],score:0,total:10,passed:false,agreed:false},trainRows=[],warnData={warnings:[],drivers:[]};
-function trReset(){tr={step:'start',name:'',did:'',plate:'',co:user&&user.role==='IC'?user.company:'',les:0,ans:[],score:0,total:10,passed:false,agreed:false};}
+function trReset(){tr={step:'start',name:'',did:'',plate:'',co:user&&user.role==='IC'?user.company:'',les:0,ans:[],score:0,total:10,passed:false,agreed:false,photo:''};}
 function trKeep(){const a=$('#tr_n');if(a)tr.name=a.value.trim();const b=$('#tr_i');if(b)tr.did=b.value.trim();const c=$('#tr_p');if(c)tr.plate=c.value.trim();const d=$('#tr_c');if(d)tr.co=d.value;}
 function viewTrain(){const L=LES[lang]||LES.en,Q=QZ[lang]||QZ.en,s=tr.step;let h=msg(note.replace(/^!/,''),note.startsWith('!'));
   if(s==='start'){h+=`<div class="card"><h3 style="margin-top:0">${t('trh')}</h3><div class="hint">${t('trnote')}</div>
@@ -481,6 +481,7 @@ function viewTrain(){const L=LES[lang]||LES.en,Q=QZ[lang]||QZ.en,s=tr.step;let h
   else if(s==='fail'){h+=`<div class="card"><div class="msg err">${t('trfail')} ${tr.score}/${tr.total}</div><div class="row"><button class="btn" onclick="tr.step='learn';tr.les=0;tr.ans=[];viewTrain()">${t('trretry')}</button></div></div>`;}
   else if(s==='sign'){h+=`<div class="card"><div class="msg">${t('trpassed')} ${tr.score}/${tr.total}</div><h3>${t('trdecl')}</h3>
    <p style="line-height:1.55">${esc(t('trdecltxt'))}</p><label class="op"><input type="checkbox" id="tr_a" ${tr.agreed?'checked':''} onchange="tr.agreed=this.checked"> ${esc(tr.name)}: ${t('tragree')}</label>
+   <label style="margin-top:10px">${t('trselfie')}</label><div style="display:flex;gap:12px;align-items:center"><img id="selfie" ${tr.photo?`src="${tr.photo}"`:''} style="width:90px;height:112px;object-fit:cover;border:1px solid var(--line);background:#f2f2f2"><input type="file" accept="image/*" capture="user" onchange="selfiePick(this)"></div>
    <label style="margin-top:10px">${t('trsign')}</label><canvas id="sig" width="480" height="150" style="border:1px solid var(--line);background:#fff;touch-action:none;max-width:100%"></canvas>
    <div class="row"><button class="btn" onclick="trSave()">${t('trsubmitsign')}</button><button class="btn sec" onclick="sigClear()">${t('trclear')}</button></div></div>`;}
   else if(s==='done'){h+=`<div class="card"><div class="msg">${t('trdone')}</div><div class="row"><button class="btn" onclick="printCert('${tr.last}')">${t('trcert')}</button><button class="btn sec" onclick="trReset();go('train')">${t('trnew')}</button></div></div>`;}
@@ -498,21 +499,36 @@ function sigInit(){const c=$('#sig'),x=c.getContext('2d');x.lineWidth=2.5;x.line
   c.onpointerup=c.onpointercancel=()=>{sigDown=false;};}
 function sigClear(){const c=$('#sig');c.getContext('2d').clearRect(0,0,c.width,c.height);sigInk=false;}
 const idOk=v=>!v||/^\d{12,16}$/.test(v);
-async function trSave(){try{if(!idOk(tr.did))throw new Error(t('idfmt'));tr.agreed=$('#tr_a').checked;if(!tr.agreed)throw new Error(t('tragreeerr'));if(!sigInk)throw new Error(t('trsignerr'));
-  const r=await api('saveTraining',{answers:tr.ans,driverName:tr.name,driverId:tr.did,plate:tr.plate,company:tr.co,agreed:true,lang,signature:$('#sig').toDataURL('image/png')});
+async function selfiePick(inp){const f=inp.files[0];if(!f)return;try{const img=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(f);});
+  let w=300,q=.7,u='';for(let k=0;k<5;k++){const sc=Math.min(1,w/Math.min(img.width,img.height)),W=Math.round(img.width*sc),H=Math.round(img.height*sc),c=document.createElement('canvas');const cw=Math.min(W,Math.round(H*.8)),ch=H;c.width=cw;c.height=ch;c.getContext('2d').drawImage(img,(W-cw)/2/sc,0,cw/sc,ch/sc,0,0,cw,ch);u=c.toDataURL('image/jpeg',q);if(u.length<42000)break;w-=50;q-=.1;}
+  tr.photo=u;$('#selfie').src=u;}catch(e){errNote(e);}}
+async function trSave(){try{if(!tr.photo)throw new Error(t('trselfieerr'));if(!idOk(tr.did))throw new Error(t('idfmt'));tr.agreed=$('#tr_a').checked;if(!tr.agreed)throw new Error(t('tragreeerr'));if(!sigInk)throw new Error(t('trsignerr'));
+  const r=await api('saveTraining',{answers:tr.ans,driverName:tr.name,driverId:tr.did,plate:tr.plate,company:tr.co,agreed:true,lang,photo:tr.photo,signature:$('#sig').toDataURL('image/png')});
   tr.last=r.trainId;tr.step='done';note='';trainRows=(await api('listTraining')).training;viewTrain();}catch(e){errNote(e);viewTrain();$('#app').scrollIntoView();}}
 async function printCert(id){const w=window.open('','_blank');if(!w){note='!Allow pop-ups to print';render();return;}try{const r=(await api('getTraining',{trainId:id})).record;w.document.open();w.document.write(certDoc(r));w.document.close();setTimeout(()=>w.print(),900);}catch(e){w.close();note='!'+e.message;render();}}
-function certDoc(r){return `<!doctype html><html><head><meta charset="utf-8"><title>Training completion ${esc(r.TrainID)}</title><link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>@page{size:A4;margin:14mm}body{font-family:Jost,Arial,sans-serif;color:#222;font-size:11pt}h1{font-weight:300;letter-spacing:.14em;text-transform:uppercase;font-size:16pt;margin:0}.en{color:#666;font-size:9.5pt}
-.h{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #FBCE07;padding-bottom:8px;margin-bottom:14px}table{width:100%;border-collapse:collapse;margin:10px 0}td{border:1px solid #999;padding:6px 8px}td.l{background:#f3f3f3;width:30%;font-weight:500}
-li{margin:3px 0}.sg{display:flex;gap:30px;margin-top:20px}.sg div{flex:1;border-top:1px solid #333;padding-top:4px;min-height:90px;font-size:9.5pt}.sg img{max-height:70px;display:block;margin-bottom:4px}</style></head><body>
-<div class="h"><div>${lockup(120)}</div><div style="text-align:right"><h1>Pernyataan Penyelesaian Pelatihan</h1><div class="en">Driver Training Completion Declaration | Sei Mangkei</div></div></div>
-<table><tr><td class="l">Nama / Name</td><td>${esc(r.DriverName)}</td></tr><tr><td class="l">No. ID / SIM / ID no.</td><td>${esc(r.DriverID)}</td></tr><tr><td class="l">Kontraktor / Contractor</td><td>${esc(r.Company)}</td></tr><tr><td class="l">Kendaraan / Vehicle</td><td>${esc(r.Plate)} ${esc(r.ItemID)}</td></tr>
-<tr><td class="l">Nilai / Score</td><td>${r.Score} / ${r.Total} (lulus / passed)</td></tr><tr><td class="l">Tanggal / Date</td><td>${esc((r.Time||'').slice(0,10))}</td></tr><tr><td class="l">Berlaku s/d / Valid until</td><td>${esc(r.ValidUntil)}</td></tr></table>
-<b>Materi / Content:</b><ul><li>Mengemudi defensif / Defensive driving</li><li>TANPA FLAGMAN = TIDAK BERGERAK / NO FLAGMAN = NO MOVEMENT</li><li>Life-Saving Rules: keselamatan berkendara, garis tembak, beban menggantung / driving safety, line of fire, suspended load</li><li>Sistem peringatan SP1 / SP2 / SP3 / Warning system</li></ul>
-<p>Saya menyatakan telah menyelesaikan pelatihan ini, memahami aturan di atas, dan bersedia menerima sistem peringatan bila melanggar.<br><span class="en">I declare that I have completed this training, understand the rules above, and accept the warning system if I break them.</span></p>
-<div class="sg"><div>${r.Signature?`<img src="${r.Signature}">`:''}Tanda tangan pengemudi / Driver signature<br>${esc(r.DriverName)}</div><div><br><br>Diverifikasi HSSE kontraktor / Contractor HSE<br>Nama / Name:</div></div>
-<p class="en" style="margin-top:18px">Record ${esc(r.TrainID)} | recorded by ${esc(r.RecordedBy)}</p></body></html>`;}
+function certDoc(r){
+  const url=r.Token?location.href.split('#')[0].split('?')[0]+'?c='+encodeURIComponent(r.TrainID)+'&t='+encodeURIComponent(r.Token):'';
+  const sim=String(r.DriverID||'').replace(/\s/g,''),simm=sim?'&middot;&middot;&middot;&middot; '+esc(sim.slice(-4)):'-';
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Driver training ${esc(r.TrainID)}</title><link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>@page{size:A5 landscape;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Jost,Arial,sans-serif;color:#222}
+.c{width:210mm;height:148mm;border-top:4mm solid #43a047;border-bottom:4mm solid #43a047;padding:7mm 12mm 0;position:relative;overflow:hidden}
+.top{display:flex;align-items:center;gap:6mm}.top small{font-size:10pt;letter-spacing:.1em;text-transform:uppercase;color:#777}
+h1{font-weight:300;font-size:15pt;letter-spacing:.04em;text-transform:uppercase;margin:6mm 0 0;max-width:140mm;line-height:1.15}.sub{font-size:9.5pt;color:#666;margin-top:1mm}
+.nm{font-size:25pt;font-weight:600;letter-spacing:.02em;text-transform:uppercase;margin-top:5mm;line-height:1.05}.co{font-size:12pt;color:#555;margin-top:1mm}
+table{border-collapse:collapse;margin-top:4mm}td{padding:1.1mm 0;font-size:10.5pt}td.l{color:#777;width:38mm}td.v{font-weight:500;letter-spacing:.03em}
+.ph{position:absolute;right:12mm;top:22mm;width:34mm;height:42mm;border:.4mm solid #bbb;object-fit:cover;background:#f2f2f2;display:flex;align-items:center;justify-content:center;color:#999;font-size:8pt;text-align:center}
+.qr{position:absolute;right:12mm;top:70mm;width:34mm;text-align:center;font-size:7pt;color:#666}.qr svg{width:30mm;height:30mm;display:block;margin:0 auto 1mm}
+.ft{position:absolute;left:12mm;right:60mm;bottom:5mm;font-size:7pt;line-height:1.4;color:#555}.sg{position:absolute;right:12mm;bottom:5mm;width:34mm;text-align:center;font-size:6.5pt;color:#555;border-top:.3mm solid #333;padding-top:.6mm}.sg img{max-height:11mm;display:block;margin:0 auto}
+.wm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40pt;font-weight:600;color:rgba(67,160,71,.07);transform:rotate(-22deg);pointer-events:none;white-space:nowrap}
+</style></head><body><div class="c"><div class="wm">ECOOILS &middot; SEI MANGKEI</div>
+<div class="top">${lockup(110)}<small>Sei Mangkei</small></div>
+<h1>Driver Defensive Driving &amp; Safety Training</h1><div class="sub">Pelatihan Mengemudi Defensif &amp; Keselamatan Pengemudi &middot; Mentari Project</div>
+<div class="nm">${esc(r.DriverName)}</div><div class="co">${esc(r.Company)}</div>
+<table><tr><td class="l">Certificate no.</td><td class="v">${esc(r.TrainID)}</td></tr><tr><td class="l">Training date</td><td class="v">${esc((r.Time||'').slice(0,10))}</td></tr><tr><td class="l">Valid until</td><td class="v">${esc(r.ValidUntil)}</td></tr><tr><td class="l">Score</td><td class="v">${r.Score} / ${r.Total} &nbsp;PASS</td></tr><tr><td class="l">SIM</td><td class="v">${simm}</td></tr>${r.Plate?`<tr><td class="l">Vehicle</td><td class="v">${esc(r.Plate)}</td></tr>`:''}</table>
+${r.Photo?`<img class="ph" src="${r.Photo}">`:'<div class="ph">Photo</div>'}
+<div class="qr">${url?qrSvg(url)+'Scan to verify<br>'+esc(r.Token):''}</div>
+<div class="ft">This certificate confirms completion of driver defensive driving and site safety training only.<br>It is not proof of employment by EcoOils. The holder is employed by their own contractor.<br>Valid only while the QR page shows VALID. Personal data is held confidentially in the EcoOils register.</div>
+<div class="sg">${r.Signature?`<img src="${r.Signature}">`:''}Driver signature</div></div></body></html>`;}
 
 // ---------- warnings view ----------
 function lvl(n){return `<span class="pill ${n>=3?'bad':n===2?'warn':'pend'}">SP${n}</span>`;}
@@ -722,7 +738,12 @@ async function stickerPrint(){const w=window.open('','_blank');
 
 // ---------- public verification page (QR target) ----------
 function dcount(n){if(n===null||n===undefined)return '';const c=n<0?'bad':n<=30?'warn':'ok';return `<span class="pill ${c}" style="font-size:15px;padding:5px 12px">${n<0?t('expd'):n+' '+t('dleft')}</span>`;}
-async function renderVerify(){
+async function renderVerifyTr(){
+  $('#app').innerHTML='<div class="vbox"></div>';const box=$('#app .vbox');
+  try{const v=(await api('verifyTraining',{id:VERIFY.id,t:VERIFY.t})).v,col=v.Valid?'#2e7d32':'#DD1D21';
+    box.innerHTML=`<div class="banner" style="background:${col}"><b>${esc(t(v.Valid?'trvvalid':'trvexp'))}</b></div><div class="card" style="display:flex;gap:14px;align-items:flex-start">${v.Photo?`<img src="${v.Photo}" style="width:100px;height:125px;object-fit:cover;border:1px solid var(--line)">`:''}<div><div style="font-size:1.3rem;font-weight:600;text-transform:uppercase">${esc(v.DriverName)}</div><div class="hint">${esc(v.Company)}</div><table><tbody><tr><td>${t('trvno')}</td><td><b>${esc(v.TrainID)}</b></td></tr><tr><td>${t('date')}</td><td>${esc(v.Date)}</td></tr><tr><td>${t('trvalid')}</td><td>${esc(v.ValidUntil)}</td></tr><tr><td>${t('trscore')}</td><td>${v.Score}/${v.Total}</td></tr></tbody></table></div></div>`;
+  }catch(e){box.innerHTML=`<div class="banner" style="background:#DD1D21"><b>${esc(e.message)}</b></div>`;}}
+async function renderVerify(){if(VERIFY.c)return renderVerifyTr();
   $('#app').innerHTML='<div class="vbox"></div>';const box=$('#app .vbox');
   try{const v=(await api('verify',{id:VERIFY.id,t:VERIFY.t})).v;
     const col={FIT:'#2e7d32',SUSPENDED:'#e08a00',VOID:'#DD1D21','NOT APPROVED':'#6b7b8c'}[v.Fit]||'#6b7b8c',txt={FIT:t('vfit'),SUSPENDED:t('vsusp'),VOID:t('vvoid'),'NOT APPROVED':t('vna')}[v.Fit];
