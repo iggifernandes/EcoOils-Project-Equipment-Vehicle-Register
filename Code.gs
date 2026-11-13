@@ -1,10 +1,10 @@
-// VERSION 1.7.17 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.17';
+// VERSION 1.7.18 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.18';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
 
-const EQ_H = ['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','OperatorLicenceClass','Status','LocationStatus','NextInspection','DecisionNote','Remarks','SubmittedBy','SubmittedAt','DecidedBy','DecidedAt','UpdatedAt','YearMfg','CertOutside','AgeOverride'];
+const EQ_H = ['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','OperatorLicenceClass','Status','LocationStatus','NextInspection','DecisionNote','Remarks','SubmittedBy','SubmittedAt','DecidedBy','DecidedAt','UpdatedAt','YearMfg','CertOutside','AgeOverride','InspBy','InspAt','InspRes','InspChk','InspNote'];
 const DOC_H = ['DocID','ItemID','DocType','Number','Expiry','FileName','FileId','UploadedBy','UploadedAt','Verified','VerifiedBy','VerifiedAt','Note','Current','RemoveReq'];
 const ST_H = ['StickerNo','ItemID','Token','IssuedAt','IssuedBy','Status','PrintCount','PrintedAt','PrintedBy','ReprintAllowed','ReprintReason','VoidReason','VoidedBy','VoidedAt'];
 const IN_H = ['InspID','ItemID','Date','Inspector','Kind','Result','Checklist','Notes'];
@@ -114,6 +114,7 @@ function doPost(e) {
         case 'declineRemoval': return out(declineRemoval(user, r.docId));
         case 'moveDoc':        return out(moveDoc(user, r.docId, r.toItemId));
         case 'approve':        return out(approve(user, r.itemId, r.checklist, r.notes, r.kind));
+        case 'recordInspection': return out(recordInspection(user, r.itemId, r.checklist, r.notes, r.kind, r.result));
         case 'ageOverride':    return out(ageOverride(user, r.itemId, r.reason));
         case 'reject':         return out(reject(user, r.itemId, r.note));
         case 'voidItem':       return out(voidItem(user, r.itemId, r.reason));
@@ -258,10 +259,11 @@ function logout(token) {
 function effRole(role, company) {
   const r = norm(role), eco = norm(company) === 'ecooils';
   if (r.indexOf('view') === 0) return 'Viewer';
+  if (eco && r.indexOf('inspect') === 0) return 'Inspector';
   if (eco) return (r.indexOf('hsse') === 0 || r.indexOf('admin') === 0) ? 'HSSE' : 'Viewer';
   return 'IC';
 }
-function canSee(u, it) { return u.role === 'HSSE' || u.role === 'Viewer' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
+function canSee(u, it) { return u.role === 'HSSE' || u.role === 'Viewer' || u.role === 'Inspector' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
 function canWork(u, it) { return u.role === 'HSSE' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
 function needHSSE(u) { if (u.role !== 'HSSE') throw new Error('HSSE rights required'); }
 function getItem(id) {
@@ -566,6 +568,8 @@ function approve(user, id, checklist, notes, kindIn) {
   const ag = ageInfo(it);
   if (!ag.year) throw new Error('Year of manufacture is required: ask the contractor to fill it in');
   if (ag.over && !it.AgeOverride) throw new Error('Over the maximum age (' + ag.age + ' years, maximum ' + ag.max + '). Record an HSSE override with a reason first');
+  const cut = String(it.DecidedAt || '') > String(it.SubmittedAt || '') ? it.DecidedAt : it.SubmittedAt;
+  if ((!checklist || inspItems(it).some(k => !(checklist[k] === true || checklist[k] === 'na'))) && it.InspRes === 'Pass' && it.InspChk && String(it.InspAt) >= String(cut || '')) { try { checklist = JSON.parse(it.InspChk); } catch (e) {} }
   const need = inspItems(it), failed = need.filter(k => !checklist || !(checklist[k] === true || (NA_OK.indexOf(k) >= 0 && checklist[k] === 'na')));
   if (failed.length) throw new Error('Physical inspection incomplete: ' + failed.length + ' checklist item(s) not passed');
   let minExp = plusDays(REINSPECT_DAYS);
@@ -584,6 +588,25 @@ function approve(user, id, checklist, notes, kindIn) {
   }
   audit(user, 'approve', id, kind + ' ' + stickerNo + (created ? ' issued' : ''));
   return { ok: true, stickerNo: stickerNo, created: created, nextInspection: minExp };
+}
+
+// Inspector (e.g. site HSSE colleague, read-only otherwise) records the physical inspection; HSSE Manager still approves and issues the sticker.
+function recordInspection(user, id, checklist, notes, kindIn, result) {
+  if (user.role !== 'Inspector' && user.role !== 'HSSE') throw new Error('Inspector rights required');
+  const it = getItem(id);
+  if (['Submitted', 'Approved'].indexOf(it.Status) < 0) throw new Error('Entry is not submitted for inspection');
+  const pass = result !== 'Fail', need = inspItems(it);
+  if (pass) {
+    const failed = need.filter(k => !checklist || !(checklist[k] === true || (NA_OK.indexOf(k) >= 0 && checklist[k] === 'na')));
+    if (failed.length) throw new Error('Physical inspection incomplete: ' + failed.length + ' checklist item(s) not passed');
+  } else if (!String(notes || '').trim()) throw new Error('Give the reason it did not pass');
+  const kind = INSP_KINDS.indexOf(kindIn) >= 0 ? kindIn : (it.Status === 'Submitted' ? 'Pre-mobilisation' : 'Monthly');
+  addRow('Inspections', IN_H, { InspID: 'I-' + Utilities.getUuid().slice(0, 8), ItemID: id, Date: iso(), Inspector: user.email, Kind: kind, Result: pass ? 'Pass' : 'Fail', Checklist: JSON.stringify(checklist || {}), Notes: notes || '' });
+  it.InspBy = user.email; it.InspAt = iso(); it.InspRes = pass ? 'Pass' : 'Fail'; it.InspChk = JSON.stringify(checklist || {}); it.InspNote = String(notes || '').slice(0, 300); it.UpdatedAt = iso();
+  writeRow('Equipment', EQ_H, it);
+  audit(user, 'recordInspection', id, kind + ' ' + (pass ? 'Pass' : 'Fail'));
+  alertHSSE('Physical inspection ' + (pass ? 'PASSED' : 'NOT PASSED') + ': ' + it.PlateSerial + ' (' + it.Company + ')', 'Inspected by ' + user.email + ' (' + kind + ').\nEntry: ' + id + ' ' + it.Type + ' ' + it.PlateSerial + '\nResult: ' + (pass ? 'Pass' : 'Not passed') + '\nNotes: ' + (notes || '-') + '\n\nOpen the register to approve and issue the sticker.');
+  return { ok: true, result: pass ? 'Pass' : 'Fail' };
 }
 
 function ageOverride(user, id, reason) {
@@ -828,7 +851,7 @@ function saveTraining(user, p) {
   audit(user, 'training', id, name + ' ' + g.score + '/' + g.total);
   return { ok: true, trainId: id };
 }
-function canSeeCo(user, co) { return user.role === 'HSSE' || user.role === 'Viewer' || (user.role === 'IC' && norm(co) === norm(user.company)); }
+function canSeeCo(user, co) { return user.role === 'HSSE' || user.role === 'Viewer' || user.role === 'Inspector' || (user.role === 'IC' && norm(co) === norm(user.company)); }
 function listTraining(user) {
   tsheet('Training', TRAIN_H);
   const rows = readAll('Training', TRAIN_H).filter(r => canSeeCo(user, r.Company)).map(r => { const o = strip(r); o.HasSig = !!o.Signature; delete o.Signature; return o; });
