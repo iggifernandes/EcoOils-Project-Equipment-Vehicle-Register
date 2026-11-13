@@ -96,7 +96,7 @@ dialog.fs{width:100vw;max-width:100vw;height:100vh;max-height:100vh;margin:0}dia
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="fsb" id="fsb" onclick="toggleFs()" title="Full screen">&#x26F6; <span id="fst">Full screen</span></button><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.7.18';const NEED_BACKEND='1.7.18';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
+const VERSION='1.7.19';const NEED_BACKEND='1.7.19';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -328,7 +328,7 @@ function drawItem(m,e){const i=items.find(x=>x.ID===cur);if(!i)return;$('#dt').t
   <h3>${t('docs')} ${canWork()&&rvList(i).length?`<button class="btn sm" style="margin-left:8px" onclick="reviewDocs()">${t('reviewall')}</button>`:''}</h3>${uploadBar(i)}<div class="hint" style="margin-bottom:6px">${t('docnote')}</div><div class="tw"><table><thead><tr><th>${t('docs')}</th><th>${t('status')}</th><th>${t('number')}</th><th>${t('expiry')}</th><th></th></tr></thead><tbody>${i.Rules.filter(r=>!r.opt).map(r=>docRow(i,r)).join('')}${i.Rules.some(r=>r.opt)?`<tr><th colspan="5" style="background:#f3f3f3">${t('optdocs')}</th></tr>${i.Rules.filter(r=>r.opt).map(r=>docRow(i,r)).join('')}`:''}</tbody></table></div>
   <div class="row"><button class="btn sec" onclick="printChk()">${t('chkbtn')}</button></div>
   ${canWork()&&['Draft','Rejected','Void'].includes(i.Status)?`<div class="row"><button class="btn" onclick="submitItem()">${t('submit')}</button></div>`:''}
-  ${(isHSSE()||isInsp())&&['Submitted','Approved'].includes(i.Status)?inspHtml(i):''}${isHSSE()&&i.Status==='Approved'?stickerHtmlPanel(i):''}
+  ${(isHSSE()||isInsp())&&['Submitted','Approved'].includes(i.Status)?inspHtml(i):''}${canWork()&&i.Status==='Approved'?stickerHtmlPanel(i):''}
   ${isHSSE()?`<h3>${t('adminh')}</h3>${adminAge(i)}<h3>${t('delh')}</h3><div id="delbox"><div class="row" style="margin-top:0"><button class="btn red" onclick="showDel()">${t('delb')}</button></div></div>`:''}`;
   if(!editable)$('#df').querySelectorAll('#df input,#df select,#df textarea').forEach(x=>x.disabled=true);if($('#upk'))syncUp();}
 async function setLoc(v){try{await api('setLocation',{itemId:cur,location:v});const i=items.find(x=>x.ID===cur);if(i)i.LocationStatus=v;await load();drawItem(t('saved'));}catch(e){drawItem(e.message,1);}}
@@ -603,9 +603,9 @@ function inspHtml(i){const re=i.Status==='Approved',IN=isInsp(),ok=i.InspRes&&i.
   <div class="grid" style="margin-top:10px"><div><label>${t('inspkind')}</label><select id="ikind"><option value="Pre-mobilisation" ${re?'':'selected'}>${t('k_Pre')}</option><option value="Site">${t('k_Site')}</option><option value="Monthly" ${re?'selected':''}>${t('k_Monthly')}</option></select></div></div>
   <div class="grid" style="margin-top:10px"><div style="grid-column:1/-1"><label>${t('inspnotes')}</label><textarea id="inotes" rows="2"></textarea></div></div>
   ${IN?`<div class="row"><button class="btn" onclick="recInsp('Pass')">${t('recpass')}</button><button class="btn red" onclick="recInsp('Fail')">${t('recfail')}</button></div><div class="hint" style="white-space:normal">${t('rechint')}</div>`:`<div class="row"><button class="btn" onclick="approveItem()">${re?t('reinsp'):t('approve')}</button>${re?'':`<button class="btn red" onclick="rejectItem()">${t('reject')}</button>`}</div>`}`;}
-function stickerHtmlPanel(i){const s=stickerOf(i.ID);if(!s)return '';const can=s.PrintCount===0||s.ReprintAllowed;
-  return `<h3>${t('stk')}</h3><div class="row" style="margin-top:0"><span class="pill ok">${esc(s.StickerNo)}</span><span class="pill ${s.PrintCount?'pend':'warn'}">${s.PrintCount?t('printed')+' '+esc((s.PrintedAt||'').slice(0,10)):t('notprinted')}</span></div>
-  <div class="row"><button class="btn sec" onclick="stickerPreview()">${t('preview')}</button><button class="btn" ${can?'':'disabled'} onclick="stickerPrint()">${t('printstk')}</button>${s.PrintCount&&!s.ReprintAllowed?`<button class="btn sec" onclick="allowReprint()">${t('reprint')}</button>`:''}<button class="btn red" onclick="voidItem()">${t('voidit')}</button></div>`;}
+function stickerHtmlPanel(i){const s=stickerOf(i.ID);if(!s)return '';const can=true;
+  return `<h3>${t('stk')}</h3><div class="row" style="margin-top:0"><span class="pill ok">${esc(s.StickerNo)}</span><span class="pill ${s.PrintCount?'pend':'warn'}">${s.PrintCount?t('printed')+' '+s.PrintCount+'x | '+esc((s.PrintedAt||'').slice(0,10)):t('notprinted')}</span></div>
+  <div class="row"><button class="btn sec" onclick="stickerPreview()">${t('preview')}</button><button class="btn" ${can?'':'disabled'} onclick="stickerPrint()">${t('printstk')}</button>${isHSSE()?`<button class="btn red" onclick="voidItem()">${t('voidit')}</button>`:''}</div>`;}
 
 // ---------- item actions ----------
 async function refresh(m,e){await load();drawItem(m,e);}
@@ -691,12 +691,12 @@ function stickerDoc(s,i,preview){
 <div class="plate">${esc(i.PlateSerial)}</div>
 <div class="meta"><div class="q">${qrSvg(url)}</div><div class="t"><b>Type / Jenis</b>${esc(i.Type)}<b>Company / Perusahaan</b>${esc(i.Company)}<b>Issued / Terbit</b>${esc(s.IssuedAt)}<b>Sticker / Stiker</b>${esc(s.StickerNo)}</div></div>
 <div class="scan">Scan to verify live status / Pindai untuk verifikasi status terkini</div>
-<div class="disc"><p><b>DISCLAIMER.</b> This sticker confirms that the ${V?'vehicle':'equipment'} passed EcoOils Initial Inspection and document verification on the date of issue only. If any damage or defect is identified during normal inspection, this inspection is VOID and the ${V?'vehicle':'equipment'} must be re-inspected before further use on site. Validity is confirmed only by scanning the QR code. Single issue, non-transferable.</p>
-<p><b>PERNYATAAN.</b> Stiker ini menyatakan ${V?'kendaraan':'peralatan'} lulus Inspeksi Awal dan verifikasi dokumen EcoOils pada tanggal terbit. Jika ditemukan kerusakan atau cacat saat inspeksi normal, inspeksi ini BATAL dan ${V?'kendaraan':'peralatan'} wajib diinspeksi ulang sebelum digunakan di lokasi. Keabsahan hanya dipastikan dengan memindai kode QR. Satu kali terbit, tidak dapat dipindahtangankan.</p></div>
-<div class="foot">Single print &middot; S/N ${esc(s.StickerNo)}</div>
+<div class="disc"><p><b>DISCLAIMER.</b> This sticker confirms that the ${V?'vehicle':'equipment'} passed EcoOils Initial Inspection and document verification on the date of issue only. If any damage or defect is identified during normal inspection, this inspection is VOID and the ${V?'vehicle':'equipment'} must be re-inspected before further use on site. Validity is confirmed only by scanning the QR code. Valid only for the plate shown; non-transferable.</p>
+<p><b>PERNYATAAN.</b> Stiker ini menyatakan ${V?'kendaraan':'peralatan'} lulus Inspeksi Awal dan verifikasi dokumen EcoOils pada tanggal terbit. Jika ditemukan kerusakan atau cacat saat inspeksi normal, inspeksi ini BATAL dan ${V?'kendaraan':'peralatan'} wajib diinspeksi ulang sebelum digunakan di lokasi. Keabsahan hanya dipastikan dengan memindai kode QR. Hanya berlaku untuk pelat yang tertera; tidak dapat dipindahtangankan.</p></div>
+<div class="foot">Scan QR to verify &middot; S/N ${esc(s.StickerNo)}</div>
 ${preview?'<div class="wm">PREVIEW<br>NOT VALID</div>':''}</div></body></html>`;}
 function stickerPreview(){const i=items.find(x=>x.ID===cur),s=stickerOf(cur);const w=window.open('','_blank');w.document.open();w.document.write(stickerDoc(s,i,true));w.document.close();}
-async function stickerPrint(){if(!confirm(t('printconfirm')))return;const w=window.open('','_blank');
+async function stickerPrint(){const w=window.open('','_blank');
   try{const r=await api('printSticker',{itemId:cur});w.document.open();w.document.write(stickerDoc(r.sticker,r.item,false));w.document.close();setTimeout(()=>w.print(),900);await refresh();}catch(e){if(w)w.close();drawItem(e.message,1);}}
 
 // ---------- public verification page (QR target) ----------

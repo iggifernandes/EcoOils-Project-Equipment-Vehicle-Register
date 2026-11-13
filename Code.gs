@@ -1,5 +1,5 @@
-// VERSION 1.7.18 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.18';
+// VERSION 1.7.19 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.19';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -320,7 +320,7 @@ function listAll(user) {
     return o;
   });
   const docs = docsAll.filter(d => ids[d.ItemID]).map(d => ({ DocID: d.DocID, ItemID: d.ItemID, DocType: d.DocType, Number: user.role === 'Viewer' ? '' : d.Number, Expiry: d.Expiry, FileName: d.FileName, UploadedBy: d.UploadedBy, UploadedAt: d.UploadedAt, Verified: d.Verified, VerifiedBy: d.VerifiedBy, Note: d.Note, RemoveReq: d.RemoveReq || '' }));
-  const stickers = readAll('Stickers', ST_H).filter(s => ids[s.ItemID]).map(s => ({ StickerNo: s.StickerNo, ItemID: s.ItemID, Token: user.role === 'HSSE' ? s.Token : '', IssuedAt: s.IssuedAt, Status: s.Status, PrintCount: Number(s.PrintCount) || 0, ReprintAllowed: isTrue(s.ReprintAllowed), PrintedAt: s.PrintedAt, PrintedBy: s.PrintedBy }));
+  const stickers = readAll('Stickers', ST_H).filter(s => ids[s.ItemID]).map(s => ({ StickerNo: s.StickerNo, ItemID: s.ItemID, Token: (user.role === 'HSSE' || user.role === 'IC') ? s.Token : '', IssuedAt: s.IssuedAt, Status: s.Status, PrintCount: Number(s.PrintCount) || 0, ReprintAllowed: isTrue(s.ReprintAllowed), PrintedAt: s.PrintedAt, PrintedBy: s.PrintedBy }));
   return { ok: true, user: user, items: outItems, docs: docs, stickers: stickers, ver: VERSION };
 }
 
@@ -678,12 +678,11 @@ function activeSticker(id) {
 }
 
 function printSticker(user, id) {
-  needHSSE(user);
   const it = getItem(id), s = activeSticker(id);
+  if (!canWork(user, it)) throw new Error('Not allowed');
   if (it.Status !== 'Approved') throw new Error('Entry is not approved');
   const printed = Number(s.PrintCount) || 0;
-  if (printed > 0 && !isTrue(s.ReprintAllowed)) throw new Error('This sticker was already printed. Authorise a reprint with a reason first.');
-  s.PrintCount = printed + 1; s.PrintedAt = iso(); s.PrintedBy = user.email; s.ReprintAllowed = 'FALSE';
+  s.PrintCount = printed + 1; s.PrintedAt = iso(); s.PrintedBy = user.email;
   writeRow('Stickers', ST_H, s);
   audit(user, 'print', id, s.StickerNo + ' #' + s.PrintCount);
   return { ok: true, sticker: { StickerNo: s.StickerNo, Token: s.Token, IssuedAt: s.IssuedAt }, item: strip(it) };
