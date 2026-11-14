@@ -1,5 +1,5 @@
-// VERSION 1.7.22 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.22';
+// VERSION 1.7.24 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.24';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -113,6 +113,7 @@ function doPost(e) {
         case 'voidDoc':        return out(voidDoc(user, r.docId, r.reason));
         case 'reconsiderDoc':  return out(reconsiderDoc(user, r.docId));
         case 'declineRemoval': return out(declineRemoval(user, r.docId));
+        case 'editDocExpiry':  return out(editDocExpiry(user, r.docId, r.expiry, r.reason));
         case 'moveDoc':        return out(moveDoc(user, r.docId, r.toItemId));
         case 'approve':        return out(approve(user, r.itemId, r.checklist, r.notes, r.kind));
         case 'recordInspection': return out(recordInspection(user, r.itemId, r.checklist, r.notes, r.kind, r.result));
@@ -417,18 +418,19 @@ function itemFolder(itemId, company, category) {
   return subFolder(subFolder(co, category === 'Vehicle' ? 'Light vehicles' : 'Heavy equipment'), itemId);
 }
 
+const YEAR_DOCS = ['mcu', 'ind', 'ddc']; // 1-year validity from issue date
 function uploadDoc(user, p) {
   const it = getItem(p.itemId);
   if (!canWork(user, it)) throw new Error('Not allowed');
   const rule = docRules(it).filter(r => r.k === p.docType)[0];
   if (!rule) throw new Error('This document is not required for this entry');
   if (rule.num && !String(p.number || '').trim()) throw new Error('Document number is required');
-  // Medical fit (MCU): issue date is required; validity defaults to 1 year from the issue date. The issue date is kept in Note.
+  // Documents with a fixed 1-year validity (medical fit, site induction, defensive driving certificate): the issue date is required and the validity is issue date + 1 year. The issue date is kept in Note.
   let noteTxt = p.note || '';
-  if (p.docType === 'mcu') {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.issued || '')) throw new Error('Issue date of the medical certificate is required');
+  if (YEAR_DOCS.indexOf(p.docType) >= 0) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.issued || '')) throw new Error('Issue date of the certificate is required');
     if (p.issued > todayStr()) throw new Error('Issue date cannot be in the future');
-    if (!p.expiry) p.expiry = (parseInt(p.issued.slice(0, 4), 10) + 1) + p.issued.slice(4);
+    if (!p.expiry || p.docType !== 'mcu') p.expiry = (parseInt(p.issued.slice(0, 4), 10) + 1) + p.issued.slice(4);
     if (p.expiry <= p.issued) throw new Error('Valid-until must be after the issue date');
     noteTxt = 'Issued: ' + p.issued;
   }
@@ -515,6 +517,24 @@ function declineRemoval(user, docId) {
   return { ok: true };
 }
 // Move a document uploaded to the wrong entry. It must be re-verified on the new entry (Verified reset), so nothing is trusted by default.
+// HSSE corrects a wrong valid-until date typed by the contractor (reason required, logged in Note and Audit).
+function editDocExpiry(user, docId, expiry, reason) {
+  needHSSE(user);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(expiry || ''))) throw new Error('Use the date format YYYY-MM-DD');
+  if (!String(reason || '').trim()) throw new Error('Give the reason for the correction');
+  const d = readAll('Documents', DOC_H).filter(x => x.DocID === docId)[0];
+  if (!d) throw new Error('Document not found');
+  const old = d.Expiry || '';
+  d.Expiry = expiry; d.Note = (d.Note ? d.Note + ' | ' : '') + 'Valid-until corrected ' + (old || '-') + ' to ' + expiry + ' by ' + user.email + ': ' + String(reason).trim().slice(0, 120);
+  writeRow('Documents', DOC_H, d);
+  const it = getItem(d.ItemID);
+  if (it.Status === 'Approved' && old && String(it.NextInspection) === old) {
+    const ex = readAll('Documents', DOC_H).filter(x => x.ItemID === it.ID && isTrue(x.Current) && x.Expiry).map(x => x.Expiry).sort();
+    it.NextInspection = ex.length ? ex[0] : ''; it.UpdatedAt = iso(); writeRow('Equipment', EQ_H, it);
+  }
+  audit(user, 'editDocExpiry', d.ItemID, d.DocType + ' ' + old + ' > ' + expiry);
+  return { ok: true };
+}
 function moveDoc(user, docId, toItemId) {
   needHSSE(user);
   const d = getDocRow(docId), from = getItem(d.ItemID), to = getItem(String(toItemId || '').trim());
