@@ -1,5 +1,5 @@
-// VERSION 1.7.26 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.26';
+// VERSION 1.7.27 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.27';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -751,7 +751,8 @@ function saveContact(user, c) {
   needHSSE(user);
   const email = String(c.Email || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address');
-  if (CT_ROLES.indexOf(c.Role) < 0) throw new Error('Choose Logistics, HR or HSSE');
+  c.Role = String(c.Role || '').trim();
+  if (!c.Role || c.Role.length > 40 || !/^[\w &\/().,-]+$/.test(c.Role)) throw new Error('Choose or type a valid role (up to 40 characters)');
   if (!String(c.Company || '').trim()) throw new Error('Company is required');
   const all = readAll('Contacts', CT_H);
   if (c.ContactID) {
