@@ -104,7 +104,7 @@ dialog.fs{width:100vw;max-width:100vw;height:100vh;max-height:100vh;margin:0}dia
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="fsb" id="fsb" onclick="toggleFs()" title="Full screen">&#x26F6; <span id="fst">Full screen</span></button><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.7.27';const NEED_BACKEND='1.7.27';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
+const VERSION='1.7.28';const NEED_BACKEND='1.7.27';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
@@ -729,7 +729,10 @@ async function allowReprint(){const n=prompt(t('reprintreason'));if(!n)return;tr
 
 // ---------- sticker (QR opens the live verification page) ----------
 function qrSvg(url){const q=qrcode(0,'M');q.addData(url);q.make();return q.createSvgTag(4,0).replace(/ width="[^"]*"/,'').replace(/ height="[^"]*"/,'');}
+const PASS_CODE_FROM='2026-11-16'; // passes issued before this date keep the original layout (already printed)
+function coCode(n){n=String(n||'').trim();if(COS.includes(n))return n.toUpperCase();const w=n.split(/\s+/).filter(Boolean);return (w.length>1?w.map(x=>x[0]).join(''):n).slice(0,4).toUpperCase();}
 function stickerDoc(s,i,preview){
+  const nc=String(s.IssuedAt||'')>=PASS_CODE_FROM;
   const url=location.href.split('#')[0].split('?')[0]+'?v='+encodeURIComponent(i.ID)+'&t='+encodeURIComponent(s.Token);
   const V=i.Category==='Vehicle';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(s.StickerNo)}</title><link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -739,6 +742,7 @@ function stickerDoc(s,i,preview){
 .top small{font-size:6pt;letter-spacing:.12em;text-transform:uppercase;text-align:right;line-height:1.3}
 .pass{padding:2.5mm 4mm 1mm;text-align:center}.pass b{display:block;font-size:15pt;letter-spacing:.14em;color:#2e7d32;font-weight:600}
 .pass .en{font-size:7.6pt;font-weight:500;line-height:1.25;text-transform:uppercase;letter-spacing:.03em}.pass .id{font-size:6.6pt;font-style:italic;color:#555;margin-top:.5mm}
+.cc{background:#222;color:#FBCE07;font-weight:700;font-size:19pt;letter-spacing:.06em;padding:0 3mm;margin:-1mm 3mm -1mm -1mm;display:flex;align-items:center}.plate.n{display:flex;align-items:stretch;justify-content:space-between;padding:1mm 1mm 1mm 1mm}.plate.n span:last-child{flex:1;display:flex;align-items:center;justify-content:center}
 .plate{margin:1.5mm 4mm;border:.5mm solid #222;text-align:center;padding:1mm;font-size:17pt;font-weight:600;letter-spacing:.1em}
 .meta{display:flex;gap:3mm;padding:0 4mm;align-items:center}.meta .q{width:30mm;height:30mm;flex:none}.meta .q svg{width:100%;height:100%}
 .meta .t{font-size:7pt;line-height:1.45}.meta .t b{font-weight:500;color:#777;text-transform:uppercase;letter-spacing:.06em;font-size:6pt;display:block;margin-top:1mm}
@@ -749,7 +753,7 @@ function stickerDoc(s,i,preview){
 </style></head><body><div class="s">
 <div class="top">${lockup(104)}<small>${V?'Vehicle':'Equipment'}<br>Inspection</small></div>
 <div class="pass"><b>&#10003; PASSED</b><div class="en">${V?'Vehicle':'Equipment'} has passed EcoOils Initial Inspection and Document Verification</div><div class="id">${V?'Kendaraan':'Peralatan'} lulus Inspeksi Awal dan Verifikasi Dokumen EcoOils</div></div>
-<div class="plate">${esc(i.PlateSerial)}</div>
+${nc?`<div class="plate n"><span class="cc">${esc(coCode(i.Company))}</span><span style="${String(i.PlateSerial).length>12?'font-size:13pt':''}">${esc(i.PlateSerial)}</span></div>`:`<div class="plate">${esc(i.PlateSerial)}</div>`}
 <div class="meta"><div class="q">${qrSvg(url)}</div><div class="t"><b>Type / Jenis</b>${esc(i.Type)}<b>Company / Perusahaan</b>${esc(i.Company)}<b>Issued / Terbit</b>${esc(s.IssuedAt)}<b>Sticker / Stiker</b>${esc(s.StickerNo)}</div></div>
 <div class="scan">Scan to verify live status / Pindai untuk verifikasi status terkini</div>
 <div class="disc"><p><b>DISCLAIMER.</b> This sticker confirms that the ${V?'vehicle':'equipment'} passed EcoOils Initial Inspection and document verification on the date of issue only. If any damage or defect is identified during normal inspection, this inspection is VOID and the ${V?'vehicle':'equipment'} must be re-inspected before further use on site. Validity is confirmed only by scanning the QR code. Valid only for the plate shown; non-transferable.</p>
