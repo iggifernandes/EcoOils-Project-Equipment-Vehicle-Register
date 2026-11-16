@@ -1,5 +1,5 @@
-// VERSION 1.7.24 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.24';
+// VERSION 1.7.26 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.26';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -9,7 +9,7 @@ const DOC_H = ['DocID','ItemID','DocType','Number','Expiry','FileName','FileId',
 const ST_H = ['StickerNo','ItemID','Token','IssuedAt','IssuedBy','Status','PrintCount','PrintedAt','PrintedBy','ReprintAllowed','ReprintReason','VoidReason','VoidedBy','VoidedAt'];
 const IN_H = ['InspID','ItemID','Date','Inspector','Kind','Result','Checklist','Notes'];
 const AU_H = ['Time','User','Action','ItemID','Detail'];
-const CT_H = ['ContactID','Company','Role','Name','Email','Active'];
+const CT_H = ['ContactID','Company','Role','Name','Email','Active','Reminders'];
 const RL_H = ['Key','SentAt'];
 const SS_H = ['TokenHash','Email','Expires'];
 const CT_ROLES = ['Logistics', 'HR', 'HSSE'];
@@ -19,6 +19,7 @@ const LONG_LEAD = ['silo', 'rep', 'sio', 'kir', 'sim', 'stnk', 'swd']; // SILO, 
 const EXPIRED_EVERY_DAYS = 3;          // after expiry the reminder repeats every 3 days
 const MAIL_NAME = 'EcoOils HSSE | Heavy Equipment & Vehicle Register';
 const INSPECTION_ALERT_TO = ['Ignatius.Ambrosio@ecooils.com.my']; // who is emailed when an entry is submitted for inspection (add more addresses here)
+const REPLY_TO = ADMIN_EMAIL;           // replies to every email from the register land here (your company mailbox)
 const MAIL_FROM = ADMIN_EMAIL;         // shown as the sender when it is a verified Gmail "Send mail as" alias, otherwise used as Reply-To
 const USER_H = ['Email','Name','Role','Company','Active','Salt','Hash'];
 
@@ -132,6 +133,10 @@ function doPost(e) {
         case 'listWarnings':   return out(listWarnings(user));
         case 'issueWarning':   return out(issueWarning(user, r));
         case 'withdrawWarning': return out(withdrawWarning(user, r.warnId, r.reason));
+        case 'forceReminders': return out(forceReminders(user, r.p || {}));
+        case 'setContactReminders': return out(setContactReminders(user, r.contactId, !!r.on));
+        case 'getRemindSettings': return out(getRemindSettings(user));
+        case 'setRemindSettings': return out(setRemindSettings(user, r.hour, !!r.weekdays));
         case 'sendRemindersNow': needHSSE(user); return out({ ok: true, sent: sendReminders() });
       }
     } finally { lock.releaseLock(); }
@@ -145,9 +150,9 @@ function doPost(e) {
 function sendMail(to, subject, body) {
   try {
     const al = GmailApp.getAliases().map(a => a.toLowerCase());
-    if (al.indexOf(MAIL_FROM.toLowerCase()) >= 0) { GmailApp.sendEmail(to, subject, body, { from: MAIL_FROM, name: MAIL_NAME, replyTo: MAIL_FROM }); return 'alias'; }
+    if (al.indexOf(MAIL_FROM.toLowerCase()) >= 0) { GmailApp.sendEmail(to, subject, body, { from: MAIL_FROM, name: MAIL_NAME, replyTo: REPLY_TO }); return 'alias'; }
   } catch (e) { /* Gmail not authorised or alias not set up: use the fallback below */ }
-  MailApp.sendEmail(to, subject, body, { name: MAIL_NAME, replyTo: MAIL_FROM });
+  MailApp.sendEmail(to, subject, body, { name: MAIL_NAME, replyTo: REPLY_TO });
   return 'default';
 }
 function mailCheck() { // run once from the editor: tells you which sender will be used
@@ -756,7 +761,7 @@ function saveContact(user, c) {
     writeRow('Contacts', CT_H, cur);
   } else {
     if (all.filter(x => isTrue(x.Active) && x.Email === email && x.Company === c.Company && x.Role === c.Role)[0]) throw new Error('This contact already exists');
-    addRow('Contacts', CT_H, { ContactID: 'C-' + Utilities.getUuid().slice(0, 6), Company: c.Company, Role: c.Role, Name: c.Name || '', Email: email, Active: 'TRUE' });
+    addRow('Contacts', CT_H, { ContactID: 'C-' + Utilities.getUuid().slice(0, 6), Company: c.Company, Role: c.Role, Name: c.Name || '', Email: email, Active: 'TRUE', Reminders: 'TRUE' });
   }
   audit(user, 'saveContact', '', c.Company + ' ' + c.Role + ' ' + email);
   return { ok: true };
@@ -773,7 +778,8 @@ function removeContact(user, id) {
 // ---------- reminders: run daily by a trigger (run installTrigger() once) ----------
 function installTrigger() {
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'sendReminders') ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger('sendReminders').timeBased().everyDays(1).atHour(7).create();
+  const hv = PropertiesService.getScriptProperties().getProperty('REMIND_HOUR'), hr = hv === null ? 7 : Number(hv);
+  ScriptApp.newTrigger('sendReminders').timeBased().everyDays(1).atHour(hr >= 0 && hr <= 23 ? hr : 7).inTimezone('Asia/Jakarta').create();
 }
 function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5); }
 
@@ -785,10 +791,12 @@ function reminderStage(days, long) {
 }
 
 function sendReminders() {
+  const wk = PropertiesService.getScriptProperties().getProperty('REMIND_WEEKDAYS') === '1', dow = new Date().getDay();
+  if (wk && (dow === 0 || dow === 6)) return 0; // weekdays-only setting
   const today = todayStr();
   const items = readAll('Equipment', EQ_H).filter(i => i.Status === 'Approved');
   const docs = readAll('Documents', DOC_H).filter(d => isTrue(d.Current));
-  const contacts = readAll('Contacts', CT_H).filter(c => isTrue(c.Active));
+  const contacts = readAll('Contacts', CT_H).filter(c => isTrue(c.Active) && c.Reminders !== 'FALSE');
   const sent = {}; readAll('ReminderLog', RL_H).forEach(r => sent[r.Key] = 1);
   const byCo = {};
   items.forEach(i => {
@@ -828,6 +836,58 @@ function sendReminders() {
   return mails;
 }
 
+
+// Manual / forced reminders: choose contractors, window, recipients and an optional note; sends regardless of what was sent before. dry=true only previews.
+function forceReminders(user, p) {
+  needHSSE(user);
+  const today = todayStr(), win = Math.max(0, Math.min(365, Number(p.windowDays) || 30)), cos = (p.companies || []).map(String);
+  const all = readAll('Contacts', CT_H).filter(c => isTrue(c.Active));
+  const pick = (p.recipients || []).map(e => String(e).toLowerCase());
+  const docs = readAll('Documents', DOC_H).filter(d => isTrue(d.Current));
+  const items = readAll('Equipment', EQ_H).filter(i => i.Status === 'Approved' && (!p.itemId || i.ID === p.itemId) && (!cos.length || cos.indexOf(i.Company) >= 0));
+  const byCo = {};
+  items.forEach(i => {
+    const es = [];
+    ruleStates(i, docs, today).filter(r => !r.opt).forEach(r => { const d = docs.filter(x => x.DocID === r.docId)[0]; if (d && d.Expiry) es.push({ what: DOCL[r.k] || r.k, date: d.Expiry }); });
+    if (i.NextInspection) es.push({ what: 'EcoOils approval / re-inspection', date: i.NextInspection });
+    es.forEach(e => { const days = daysBetween(today, e.date); if (days > win || (days < 0 && !p.includeExpired)) return; (byCo[i.Company] = byCo[i.Company] || []).push({ item: i, what: e.what, date: e.date, days: days }); });
+  });
+  const hsse = p.copyHsse ? all.filter(c => c.Company === 'EcoOils').map(c => c.Email) : [];
+  const out2 = []; let mails = 0;
+  Object.keys(byCo).forEach(co => {
+    const to = all.filter(c => c.Company === co && pick.indexOf(String(c.Email).toLowerCase()) >= 0).map(c => c.Email);
+    const rec = to.concat(hsse).filter((e, i, a) => a.indexOf(e) === i);
+    const rows = byCo[co].sort((a, b) => a.days - b.days);
+    out2.push({ company: co, count: rows.length, recipients: rec });
+    if (p.dry || !to.length) return;
+    const lines = rows.map(x => '- ' + x.item.ID + ' | ' + x.item.PlateSerial + ' (' + x.item.Type + ') | ' + x.what + ' | ' + x.date + ' | ' + (x.days < 0 ? 'EXPIRED ' + (-x.days) + ' day(s) ago' : x.days === 0 ? 'expires TODAY' : 'expires in ' + x.days + ' day(s)'));
+    const note = String(p.extra || '').trim().slice(0, 600);
+    const body = (note ? note + '\n\n' : '') + 'Heavy Equipment & Vehicle Register reminder for ' + co + '.\n\n' + lines.join('\n') + '\n\nExpired items are suspended at the gate (the sticker QR will show SUSPENDED). Please upload the renewed document in the register, or request re-inspection for the approval, so HSSE can verify it.\n\nReplies to this email go to ' + REPLY_TO + '.';
+    sendMail(rec.join(','), '[EVR] ' + rows.length + ' reminder(s) - ' + co, body); mails++;
+  });
+  if (!p.dry) audit(user, 'forceReminders', p.itemId || '', mails + ' mail(s): ' + out2.map(o => o.company + ' ' + o.count).join(', '));
+  return { ok: true, sent: mails, plan: out2, dry: !!p.dry };
+}
+function setContactReminders(user, id, on) {
+  needHSSE(user);
+  const cur = readAll('Contacts', CT_H).filter(x => x.ContactID === id)[0];
+  if (!cur) throw new Error('Contact not found');
+  cur.Reminders = on ? 'TRUE' : 'FALSE'; writeRow('Contacts', CT_H, cur);
+  audit(user, 'setContactReminders', '', cur.Email + ' ' + (on ? 'on' : 'off'));
+  return { ok: true };
+}
+function getRemindSettings(user) {
+  needHSSE(user);
+  const pr = PropertiesService.getScriptProperties(), h = pr.getProperty('REMIND_HOUR');
+  return { ok: true, hour: h === null ? 7 : Number(h), weekdays: pr.getProperty('REMIND_WEEKDAYS') === '1', replyTo: REPLY_TO, tz: 'Asia/Jakarta' };
+}
+function setRemindSettings(user, hour, weekdays) {
+  needHSSE(user);
+  const h = Number(hour); if (isNaN(h) || h < 0 || h > 23) throw new Error('Hour must be 0 to 23');
+  const pr = PropertiesService.getScriptProperties(); pr.setProperty('REMIND_HOUR', String(h)); pr.setProperty('REMIND_WEEKDAYS', weekdays ? '1' : '0');
+  installTrigger(); audit(user, 'setRemindSettings', '', h + ':00 ' + (weekdays ? 'weekdays' : 'daily'));
+  return getRemindSettings(user);
+}
 
 // ---------- DRIVER TRAINING (defensive driving, No Flagman No Movement, Life-Saving Rules) ----------
 const TRAIN_H = ['TrainID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Score', 'Total', 'Passed', 'Lang', 'Signature', 'RecordedBy', 'ValidUntil', 'Photo', 'Token'];
