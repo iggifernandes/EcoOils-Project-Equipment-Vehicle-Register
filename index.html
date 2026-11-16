@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Heavy Equipment & Vehicle Register</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
@@ -87,6 +87,94 @@ dialog.fs{width:100vw;max-width:100vw;height:100vh;max-height:100vh;margin:0}dia
 .hint{font-size:.78rem;color:var(--grey);text-transform:none;letter-spacing:0}
 @media print{header nav,.bar,.row,.lang{display:none}}
 </style>
+<style id="apple-layer">
+/* ===== Apple design layer v2.0.0 — 17 principles (see DESIGN.md) ===== */
+:root{
+  --bg:#f5f5f7;--surface:#fff;--surface2:#fafafa;--ink:#1d1d1f;--grey:#6e6e73;--line:rgba(0,0,0,.08);
+  --y:#FBCE07;--r:#DD1D21;--ok:#1f8a3b;--warn:#c77700;--tint:#fff8d6;
+  --rad:14px;--rad-s:10px;--shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.06);--shadow-l:0 20px 60px rgba(0,0,0,.25);
+  --ease:cubic-bezier(.32,.72,0,1);--tap:44px;
+}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--surface:#1c1c1e;--surface2:#2c2c2e;--ink:#f5f5f7;--grey:#98989d;--line:rgba(255,255,255,.12);--ok:#32d74b;--warn:#ff9f0a;--tint:#3a3410;--shadow:0 1px 2px rgba(0,0,0,.5),0 4px 16px rgba(0,0,0,.4)}}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom);line-height:1.45}
+.wrap{padding-left:max(clamp(14px,2vw,32px),env(safe-area-inset-left));padding-right:max(clamp(14px,2vw,32px),env(safe-area-inset-right))}
+/* Depth + deference: translucent sticky header, no heavy chrome */
+header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--surface) 78%,transparent);-webkit-backdrop-filter:saturate(180%) blur(22px);backdrop-filter:saturate(180%) blur(22px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.top{padding:12px 0 6px}
+h1{color:var(--grey)}
+.sub{letter-spacing:.06em}
+.ver{color:var(--grey)}
+/* Segmented language control */
+.lang{display:inline-flex;background:var(--surface2);border-radius:9px;padding:2px;border:1px solid var(--line)}
+.lang button{border:0;background:transparent;border-radius:7px;padding:5px 12px;min-height:28px;color:var(--grey);transition:background .25s var(--ease),color .25s var(--ease)}
+.lang button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18);font-weight:500}
+/* Tab bar navigation */
+nav{gap:2px;overflow-x:auto;scrollbar-width:none;padding-bottom:6px;-webkit-overflow-scrolling:touch}nav::-webkit-scrollbar{display:none}
+nav button{border:0;border-radius:999px;margin:0;padding:0 16px;min-height:36px;white-space:nowrap;text-transform:none;letter-spacing:.01em;font-size:.88rem;color:var(--grey);transition:background .25s var(--ease),color .25s var(--ease)}
+nav button:hover{background:var(--surface2)}
+nav button.on{background:var(--ink);color:var(--bg);border:0}
+/* Content first: cards float, borders vanish */
+main{padding:22px 0 80px}
+.card,.kpi,.tw,.fold,.rl,.msg{background:var(--surface);border:0;border-radius:var(--rad);box-shadow:var(--shadow)}
+.card{padding:20px}
+.tw{overflow:hidden;overflow-x:auto}
+.kpi{border-left:0;padding:14px 16px;position:relative;overflow:hidden;transition:transform .35s var(--ease),box-shadow .35s var(--ease),background .2s}
+.kpi::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--y)}
+.kpi.r::before{background:var(--r)}.kpi.w::before{background:var(--warn)}
+.kpi b{text-decoration:none;font-weight:300;font-size:clamp(1.7rem,3vw,2.2rem);letter-spacing:-.01em}
+.kpi:hover{background:var(--surface);transform:translateY(-2px);box-shadow:var(--shadow),0 8px 24px rgba(0,0,0,.08)}
+.kpi:active{transform:scale(.98)}
+.kpi.on{background:var(--tint);outline:0;box-shadow:inset 0 0 0 2px var(--y),var(--shadow)}
+.msg{border-left:0;background:var(--tint)}.msg.err{background:color-mix(in srgb,var(--r) 12%,var(--surface))}
+/* Hierarchy: quiet headings */
+h3{border-bottom:0;margin:26px 2px 10px;font-weight:500;letter-spacing:.12em;font-size:.75rem}
+label{letter-spacing:.06em;font-size:.7rem;margin:0 0 5px 2px}
+/* Controls: 44pt targets, clear focus, forgiving */
+input,select,textarea{min-height:var(--tap);border:1px solid var(--line);border-radius:var(--rad-s);background:var(--surface2);color:var(--ink);padding:10px 12px;transition:border-color .2s,box-shadow .2s,background .2s}
+input[type=checkbox],input[type=radio]{min-height:0;width:20px;height:20px;accent-color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--y);background:var(--surface);box-shadow:0 0 0 4px color-mix(in srgb,var(--y) 40%,transparent)}
+button:focus-visible,summary:focus-visible,tr.click:focus-visible,.vi:focus-visible{outline:3px solid color-mix(in srgb,var(--y) 70%,var(--ink));outline-offset:2px;border-radius:8px}
+button.btn{min-height:var(--tap);border-radius:999px;padding:0 22px;text-transform:none;letter-spacing:.01em;font-size:.92rem;font-weight:500;background:var(--y);color:#1d1d1f;transition:transform .25s var(--ease),filter .2s,box-shadow .2s}
+button.btn:hover{filter:brightness(1.04)}button.btn:active{transform:scale(.96)}
+button.btn.sec{background:var(--surface2);border:0;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+button.btn.red{background:var(--r);color:#fff}
+button.btn.sm{min-height:32px;padding:0 14px;font-size:.8rem}
+button.btn:disabled{opacity:.4}
+/* Tables: airy rows, direct manipulation */
+th{border-bottom:1px solid var(--line);padding:12px 14px;background:var(--surface)}
+td{padding:14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+tr.click{transition:background .15s}tr.click:hover{background:var(--surface2)}tr.click:active{background:var(--tint)}
+.pill{padding:3px 11px;font-weight:500;letter-spacing:.02em}
+/* Color means something: semantic only */
+.pill.ok{background:var(--ok)}.pill.warn{background:var(--warn)}.pill.bad{background:var(--r)}
+/* Sheets: dialogs behave like iOS modals */
+dialog{border-radius:20px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-l);overflow:hidden;animation:sheet .45s var(--ease)}
+dialog::backdrop{background:rgba(0,0,0,.4);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+dialog.fs{border-radius:0}
+.dh{background:color-mix(in srgb,var(--surface) 85%,transparent);border-bottom:1px solid var(--line)}
+.x{width:32px;height:32px;border-radius:50%;background:var(--surface2);color:var(--grey);font-size:1.2rem;line-height:1;transition:background .2s}
+.x:hover{background:var(--line)}
+@keyframes sheet{from{opacity:0;transform:translateY(24px) scale(.98)}to{opacity:1;transform:none}}
+@media(max-width:700px){dialog:not(.fs):not(.dock){width:100vw;max-width:100vw;margin:auto 0 0;border-radius:20px 20px 0 0;max-height:92vh}}
+/* Folds / lists */
+.fold>summary,.rl details>summary{text-transform:none;letter-spacing:.01em;min-height:var(--tap);display:flex;align-items:center;background:var(--surface)}
+.rl details>summary{background:color-mix(in srgb,var(--surface2) 90%,transparent)}
+.vi{min-height:var(--tap);transition:background .15s}.vi:hover{background:var(--surface2)}.vi.sel{background:var(--y);color:#1d1d1f}
+.upbar{background:var(--tint);border:0;border-radius:var(--rad)}
+.login{background:var(--surface);padding:32px;border-radius:24px;box-shadow:var(--shadow)}
+.rp{border-radius:var(--rad);border-color:var(--line)}
+.rvb{background:var(--surface);color:var(--ink);border-radius:20px;overflow:hidden}
+.rvl div.on{background:var(--tint)}
+.banner{border-radius:var(--rad)}
+/* Motion with purpose, and respect for those who opt out */
+main>*{animation:rise .5s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+@media(prefers-contrast:more){:root{--line:rgba(0,0,0,.35);--grey:#404040}}
+</style>
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 </head>
 <body>
 <header><div class="wrap">
@@ -104,7 +192,7 @@ dialog.fs{width:100vw;max-width:100vw;height:100vh;max-height:100vh;margin:0}dia
 <dialog id="dlg"><div class="dh"><b id="dt" style="font-weight:500;letter-spacing:.1em;text-transform:uppercase"></b><button class="fsb" id="fsb" onclick="toggleFs()" title="Full screen">&#x26F6; <span id="fst">Full screen</span></button><button class="x" onclick="dlg.close()">&times;</button></div><div class="db" id="db"></div></dialog>
 
 <script>
-const VERSION='1.7.29';const NEED_BACKEND='1.7.27';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
+const VERSION='2.0.0';const NEED_BACKEND='1.7.27';const NAOK=['contain','elcb','rev','chock','jack','ivms','cargo','cones','rotary','spark'];const AGEMAX={Vehicle:5,'Heavy Equipment':10};;
 // After deploying Code.gs as a Web app (Execute as: Me, Access: Anyone), paste its full /exec URL here:
 const API_URL='https://script.google.com/macros/s/AKfycbxWyZ5MuhgasEb7NJUqm-z03vsyjqIe4jgYQOxF30litJyGOJqP0VY_F_N5W3nSdGqx/exec';
 // EcoOils wordmark (cropped from the Mentari logo). "PROJECT" in logo yellow is stretched under it to the same width.
