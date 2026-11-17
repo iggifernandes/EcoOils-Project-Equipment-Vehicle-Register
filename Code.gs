@@ -1,5 +1,5 @@
-// VERSION 1.7.27 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.27';
+// VERSION 1.7.30 | Heavy Equipment & Vehicle Register backend | 2026-11-06
+const VERSION = '1.7.30';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -40,8 +40,9 @@ function ageInfo(it) {
 }
 
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.
-const DOCL = { end: 'Disnaker Sumut endorsement', ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance (policy OR signed Insurance Responsibility Acknowledgement)', insack: 'Insurance Responsibility Acknowledgement (signed)', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
+const DOCL = { end: 'Disnaker Sumut endorsement', ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance (policy OR signed Insurance Responsibility Acknowledgement)', insack: 'Insurance Responsibility Acknowledgement (signed)', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', idplate: 'Equipment identification plate photo', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
+const IDPLATE_FROM = '2026-11-17'; // identification plate photo is required for all Heavy Equipment from this date; entries approved earlier are not penalised until re-inspection
 const OPTIONAL_DOCS = ['own', 'insack']; // ownership/rental agreement is a commercial matter between the IC and its vendor
 function docRules(i) {
   const R = [];
@@ -50,13 +51,13 @@ function docRules(i) {
     if (KIR_EXEMPT.indexOf(i.Type) < 0) R.push(['kir', 1, 1]);
     if (i.Type === 'Tanker truck') R.push(['b3', 2, 0]);
   } else {
-    R.push(['silo', 1, 1], ['rep', 1, 1]);
+    R.push(['idplate', 0, 0], ['silo', 1, 1], ['rep', 1, 1]);
     if (i.CertOutside === 'Yes') R.push(['end', 2, 0]); // certificate issued outside Sumatera Utara must be endorsed by Disnaker Sumut
     R.push(['sio', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ins', 1, 0], ['insack', 0, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (LIFT.indexOf(i.Type) >= 0) R.push(['rig', 1, 1]);
   }
   // Optional documents (not required for approval or fitness): commercial arrangements between the IC and its vendor.
-  return R.map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: OPTIONAL_DOCS.indexOf(r[0]) >= 0 }));
+  return R.map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: OPTIONAL_DOCS.indexOf(r[0]) >= 0 || (r[0] === 'idplate' && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < IDPLATE_FROM) }));
 }
 
 function inspItems(i) {
@@ -443,6 +444,7 @@ function uploadDoc(user, p) {
   if (rule.exp === 1 && !p.expiry) throw new Error('Expiry date is required');
   if (p.expiry && p.expiry < todayStr()) throw new Error('This document is already expired');
   if (MIMES.indexOf(p.mime) < 0) throw new Error('Only PDF, JPG or PNG files');
+  if (p.docType === 'idplate' && p.mime === 'application/pdf') throw new Error('The identification plate must be a photo (JPG or PNG), not a PDF');
   const bytes = Utilities.base64Decode(p.b64 || '');
   if (!bytes.length || bytes.length > MAX_BYTES) throw new Error('File must be under 4 MB');
   const safe = String(p.fileName || 'file').replace(/[^\w.\-]+/g, '_').slice(0, 60);
