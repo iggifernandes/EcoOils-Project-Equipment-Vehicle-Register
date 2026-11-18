@@ -1,5 +1,5 @@
-// VERSION 1.7.30 | Heavy Equipment & Vehicle Register backend | 2026-11-06
-const VERSION = '1.7.30';
+// VERSION 1.8.0 | Heavy Equipment & Vehicle Register backend | 2026-11-18
+const VERSION = '1.8.0';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -22,6 +22,7 @@ const INSPECTION_ALERT_TO = ['Ignatius.Ambrosio@ecooils.com.my']; // who is emai
 const REPLY_TO = ADMIN_EMAIL;           // replies to every email from the register land here (your company mailbox)
 const MAIL_FROM = ADMIN_EMAIL;         // shown as the sender when it is a verified Gmail "Send mail as" alias, otherwise used as Reply-To
 const USER_H = ['Email','Name','Role','Company','Active','Salt','Hash'];
+const VF_H = ['VerID','ItemID','Plate','Company','Type','DateTime','By','ByName','ByRole','Result','Reason','Note']; // on-site arrival verifications (append-only)
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const MIMES = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -73,7 +74,7 @@ function inspItems(i) {
 // ---------- ONE-TIME SETUP: run once from the Apps Script editor ----------
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  [['Equipment', EQ_H], ['Documents', DOC_H], ['Stickers', ST_H], ['Inspections', IN_H], ['Audit', AU_H], ['Contacts', CT_H], ['ReminderLog', RL_H], ['Sessions', SS_H], ['Training', TRAIN_H], ['Warnings', WARN_H], ['Users', USER_H]].forEach(p => {
+  [['Equipment', EQ_H], ['Documents', DOC_H], ['Stickers', ST_H], ['Inspections', IN_H], ['Audit', AU_H], ['Contacts', CT_H], ['ReminderLog', RL_H], ['Sessions', SS_H], ['Training', TRAIN_H], ['Warnings', WARN_H], ['Users', USER_H], ['Verifications', VF_H]].forEach(p => {
     const sh = ss.getSheetByName(p[0]) || ss.insertSheet(p[0]);
     if (sh.getLastRow() === 0) sh.appendRow(p[1]); else sh.getRange(1, 1, 1, p[1].length).setValues([p[1]]);
     sh.getRange(2, 1, sh.getMaxRows() - 1, p[1].length).setNumberFormat('@');
@@ -124,6 +125,11 @@ function doPost(e) {
         case 'voidItem':       return out(voidItem(user, r.itemId, r.reason));
         case 'printSticker':   return out(printSticker(user, r.itemId));
         case 'allowReprint':   return out(allowReprint(user, r.itemId, r.reason));
+        case 'listOfficers':   return out(listOfficers(user));
+        case 'saveOfficer':    return out(saveOfficer(user, r.officer));
+        case 'setOfficerActive': return out(setOfficerActive(user, r.email, !!r.on));
+        case 'verifyArrival':  return out(verifyArrival(user, r));
+        case 'listVerifications': return out(listVerifications(user, r.itemId));
         case 'listContacts':   return out(listContacts(user));
         case 'saveContact':    return out(saveContact(user, r.contact));
         case 'removeContact':  return out(removeContact(user, r.contactId));
@@ -162,7 +168,16 @@ function mailCheck() { // run once from the editor: tells you which sender will 
 function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
 // ---------- generic sheet helpers ----------
-function sheet(n) { return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(n); }
+function sheet(n) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(n);
+  if (!sh && n === 'Verifications') { // created automatically the first time it is needed
+    sh = ss.insertSheet(n);
+    sh.appendRow(VF_H);
+    sh.getRange(2, 1, sh.getMaxRows() - 1, VF_H.length).setNumberFormat('@');
+  }
+  return sh;
+}
 function norm(e) { return String(e || '').trim().toLowerCase(); }
 function isTrue(v) { return v === true || String(v).toUpperCase() === 'TRUE'; }
 function iso() { return new Date().toISOString(); }
@@ -226,7 +241,7 @@ function login(email, pin, keep) {
     throw new Error('Wrong email or PIN. Use "Forgot PIN" to set one.');
   }
   cache.remove(fk);
-  const user = { email: u.vals[0], name: u.vals[1], role: effRole(u.vals[2], u.vals[3]), company: u.vals[3] };
+  const user = userObj(u);
   return { ok: true, token: newSession(u.vals[0], keep === false ? 1 : SESSION_DAYS), user: user, days: keep === false ? 1 : SESSION_DAYS };
 }
 // ---------- sessions (stay signed in for SESSION_DAYS; only a hash of the token is stored) ----------
@@ -257,17 +272,24 @@ function auth(token) {
   if (!s || s.Expires < iso()) throw new Error('Session expired. Please sign in again.');
   const u = findUser(s.Email); // role changes and deactivation apply immediately
   if (!u) throw new Error('Session expired. Please sign in again.');
-  return { email: u.vals[0], name: u.vals[1], role: effRole(u.vals[2], u.vals[3]), company: u.vals[3] };
+  return userObj(u);
 }
 function logout(token) {
   if (token) { const h = tokenHash(token); dropSessions(s => s.TokenHash === h); }
   return { ok: true };
 }
+// Manager = the ADMIN_EMAIL account (recognised automatically at sign-in). HSSE Officer = EcoOils user whose Role is "HSSE Officer" (added by the Manager in Admin).
+function isManager(u) { return norm(u.email) === norm(ADMIN_EMAIL); }
+function needManager(u) { if (!isManager(u)) throw new Error('Manager rights required'); }
+function userObj(u) {
+  const co = u.vals[3], officer = norm(co) === 'ecooils' && norm(u.vals[2]).indexOf('hsse officer') === 0;
+  return { email: u.vals[0], name: u.vals[1], role: effRole(u.vals[2], co), company: co, manager: norm(u.vals[0]) === norm(ADMIN_EMAIL), officer: officer };
+}
 // Sheet wording is forgiving: "HSSE Manager", "hsse", "Admin" at EcoOils = HSSE; any contractor company = IC; "viewer" = Viewer.
 function effRole(role, company) {
   const r = norm(role), eco = norm(company) === 'ecooils';
   if (r.indexOf('view') === 0) return 'Viewer';
-  if (eco && r.indexOf('inspect') === 0) return 'Inspector';
+  if (eco && (r.indexOf('inspect') === 0 || r.indexOf('hsse officer') === 0)) return 'Inspector'; // HSSE Officer: view, record inspections, verify arrivals (never approve, delete or admin)
   if (eco) return (r.indexOf('hsse') === 0 || r.indexOf('admin') === 0) ? 'HSSE' : 'Viewer';
   return 'IC';
 }
@@ -776,6 +798,72 @@ function removeContact(user, id) {
   cur.Active = 'FALSE'; writeRow('Contacts', CT_H, cur);
   audit(user, 'removeContact', '', cur.Company + ' ' + cur.Email);
   return { ok: true };
+}
+
+// ---------- HSSE Officers (Manager only) and on-site arrival verification ----------
+function listOfficers(user) {
+  needManager(user);
+  const v = sheet('Users').getDataRange().getValues(), vf = readAll('Verifications', VF_H), out = [];
+  for (let i = 1; i < v.length; i++) {
+    if (norm(v[i][2]).indexOf('hsse officer') !== 0) continue;
+    const em = norm(v[i][0]), mine = vf.filter(x => norm(x.By) === em);
+    out.push({ Email: v[i][0], Name: v[i][1], Active: String(v[i][4]).toUpperCase() !== 'FALSE', HasPin: !!v[i][5], Verified: mine.length, Last: mine.length ? mine[mine.length - 1].DateTime : '' });
+  }
+  return { ok: true, officers: out };
+}
+function saveOfficer(user, o) {
+  needManager(user);
+  const email = norm(o && o.Email), name = String((o && o.Name) || '').trim().slice(0, 60);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address');
+  if (!name) throw new Error('Enter the officer name');
+  if (email === norm(ADMIN_EMAIL)) throw new Error('This is the Manager account');
+  const sh = sheet('Users'), v = sh.getDataRange().getValues();
+  for (let i = 1; i < v.length; i++) {
+    if (norm(v[i][0]) !== email) continue;
+    if (norm(v[i][2]).indexOf('hsse officer') !== 0) throw new Error('This email already has another role in the Users sheet. Change it there first.');
+    sh.getRange(i + 1, 2).setValue(name); sh.getRange(i + 1, 5).setValue(true);
+    audit(user, 'saveOfficer', '', email + ' reactivated');
+    return { ok: true };
+  }
+  sh.appendRow([email, name, 'HSSE Officer', 'EcoOils', true, '', '']); // no PIN: the officer sets it via "Forgot PIN"
+  audit(user, 'saveOfficer', '', email + ' added');
+  return { ok: true };
+}
+function setOfficerActive(user, email, on) {
+  needManager(user);
+  const sh = sheet('Users'), v = sh.getDataRange().getValues();
+  for (let i = 1; i < v.length; i++) {
+    if (norm(v[i][0]) === norm(email) && norm(v[i][2]).indexOf('hsse officer') === 0) {
+      sh.getRange(i + 1, 5).setValue(!!on);
+      if (!on) dropSessions(s => norm(s.Email) === norm(email)); // signed out immediately; past verifications stay on record
+      audit(user, 'setOfficerActive', '', norm(email) + (on ? ' activated' : ' deactivated'));
+      return { ok: true };
+    }
+  }
+  throw new Error('Officer not found');
+}
+// Records who accepted or rejected a vehicle on arrival. Entries are never edited or deleted: a correction is a new entry.
+function verifyArrival(user, p) {
+  if (!(user.role === 'HSSE' || user.officer)) throw new Error('Only the HSSE Manager or an HSSE Officer can verify arrivals');
+  const res = p.result === 'Rejected' ? 'Rejected' : 'Accepted';
+  const reason = String(p.reason || '').trim().slice(0, 300), note = String(p.note || '').trim().slice(0, 300);
+  const it = getItem(p.itemId);
+  if (res === 'Rejected' && reason.length < 5) throw new Error('Give the reason for rejecting this vehicle');
+  if (res === 'Accepted') {
+    if (it.Status !== 'Approved') throw new Error('This entry is not approved by HSSE yet');
+    const f = fitness(it, readAll('Documents', DOC_H).filter(d => isTrue(d.Current)), todayStr());
+    if (f.state !== 'FIT') throw new Error('Cannot accept: not FIT. ' + (f.why || []).join('; '));
+  }
+  const by = user.name || user.email;
+  addRow('Verifications', VF_H, { VerID: 'V-' + Utilities.getUuid().slice(0, 8), ItemID: it.ID, Plate: it.PlateSerial, Company: it.Company, Type: it.Type, DateTime: iso(), By: user.email, ByName: by, ByRole: isManager(user) ? 'Manager' : (user.officer ? 'HSSE Officer' : 'HSSE'), Result: res, Reason: reason, Note: note });
+  audit(user, 'verifyArrival', it.ID, res + (reason ? ' | ' + reason : ''));
+  if (res === 'Rejected') alertHSSE('Vehicle REJECTED on arrival: ' + it.PlateSerial + ' (' + it.Company + ')', 'Rejected by ' + by + ' (' + user.email + ').\nEntry: ' + it.ID + ' ' + it.Type + ' ' + it.PlateSerial + '\nReason: ' + reason + (note ? '\nNote: ' + note : ''));
+  return { ok: true, result: res };
+}
+function listVerifications(user, itemId) {
+  const rows = readAll('Verifications', VF_H).filter(r => canSeeCo(user, r.Company) && (!itemId || r.ItemID === itemId)).map(strip);
+  rows.sort((a, b) => a.DateTime < b.DateTime ? 1 : -1);
+  return { ok: true, verifications: rows.slice(0, 500) };
 }
 
 // ---------- reminders: run daily by a trigger (run installTrigger() once) ----------
