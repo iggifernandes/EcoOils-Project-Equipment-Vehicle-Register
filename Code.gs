@@ -1,5 +1,5 @@
-// VERSION 1.8.5 | Heavy Equipment & Vehicle Register backend | 2026-11-18
-const VERSION = '1.8.5';
+// VERSION 1.8.6 | Heavy Equipment & Vehicle Register backend | 2026-11-18
+const VERSION = '1.8.6';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -33,7 +33,10 @@ const REINSPECT_DAYS = 30; // periodic (monthly) re-inspection interval: change 
 const MAX_AGE = { 'Vehicle': 5, 'Heavy Equipment': 10 }; // maximum age in years (IC HSSE requirement)
 // Parking-only units (not used for construction work): HSSE may also mark these items N/A. Brakes, tyres, lights, leaks, body and plate always stay mandatory.
 const PARK_NA = ['contain', 'elcb', 'rev', 'chock', 'jack', 'ivms', 'cargo', 'cones', 'rotary', 'spark', 'fire', 'aid', 'triangle', 'horn', 'belts', 'mirrors', 'glass', 'interior', 'hyd', 'steer', 'safety', 'alarms', 'rops', 'guards', 'under', 'rope'];
-function naOk_(k, chk) { return NA_OK.indexOf(k) >= 0 || (!!chk && chk._use === 'parking' && PARK_NA.indexOf(k) >= 0); }
+// HSSE may mark any item N/A. Core items (lights, brakes, tyres, leaks, body, plate) need the reason written in the inspection notes.
+const CORE_ITEMS = ['lights', 'brakes', 'tyres', 'leaks', 'body', 'plate'];
+function naOk_(k, chk) { return true; }
+function coreNa_(chk, notes) { if (chk && CORE_ITEMS.some(k => chk[k] === 'na') && !String(notes || '').trim()) throw new Error('N/A on lights, brakes, tyres, leaks, body or plate needs a reason in the inspection notes'); }
 const NA_OK = ['contain', 'elcb', 'rev', 'chock', 'jack', 'ivms', 'cargo', 'cones', 'rotary', 'spark']; // checklist items HSSE may mark N/A where the item does not apply to that vehicle / equipment
 const INSP_KINDS = ['Pre-mobilisation', 'Site', 'Monthly'];
 function ageInfo(it) {
@@ -637,6 +640,7 @@ function approve(user, id, checklist, notes, kindIn) {
   if ((!checklist || inspItems(it).some(k => !(checklist[k] === true || checklist[k] === 'na'))) && it.InspRes === 'Pass' && it.InspChk && String(it.InspAt) >= String(cut || '')) { try { checklist = JSON.parse(it.InspChk); } catch (e) {} }
   const need = inspItems(it), failed = need.filter(k => !checklist || !(checklist[k] === true || (naOk_(k, checklist) && checklist[k] === 'na')));
   if (failed.length) throw new Error('Physical inspection incomplete: ' + failed.length + ' checklist item(s) not passed');
+  coreNa_(checklist, notes);
   let minExp = plusDays(REINSPECT_DAYS);
   rs.forEach(r => { const d = docs.filter(x => x.DocID === r.docId)[0]; if (d && d.Expiry && d.Expiry < minExp) minExp = d.Expiry; });
   const kind = INSP_KINDS.indexOf(kindIn) >= 0 ? kindIn : (it.Status === 'Submitted' ? 'Pre-mobilisation' : 'Monthly');
@@ -664,6 +668,7 @@ function recordInspection(user, id, checklist, notes, kindIn, result) {
   if (pass) {
     const failed = need.filter(k => !checklist || !(checklist[k] === true || (naOk_(k, checklist) && checklist[k] === 'na')));
     if (failed.length) throw new Error('Physical inspection incomplete: ' + failed.length + ' checklist item(s) not passed');
+    coreNa_(checklist, notes);
   } else if (!String(notes || '').trim()) throw new Error('Give the reason it did not pass');
   const kind = INSP_KINDS.indexOf(kindIn) >= 0 ? kindIn : (it.Status === 'Submitted' ? 'Pre-mobilisation' : 'Monthly');
   addRow('Inspections', IN_H, { InspID: 'I-' + Utilities.getUuid().slice(0, 8), ItemID: id, Date: iso(), Inspector: user.email, Kind: kind, Result: pass ? 'Pass' : 'Fail', Checklist: JSON.stringify(checklist || {}), Notes: notes || '' });
