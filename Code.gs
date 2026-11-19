@@ -1,5 +1,5 @@
-// VERSION 1.8.3 | Heavy Equipment & Vehicle Register backend | 2026-11-18
-const VERSION = '1.8.3';
+// VERSION 1.8.4 | Heavy Equipment & Vehicle Register backend | 2026-11-18
+const VERSION = '1.8.4';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -145,6 +145,8 @@ function doPost(e) {
         case 'signDoc':        return out(signDoc(user, r));
         case 'getDocSigns':    return out(getDocSigns(user, r.docId));
         case 'removeDocSign':  return out(removeDocSign(user, r.signId));
+        case 'addDocNote':     return out(addDocNote(user, r));
+        case 'removeDocNote':  return out(removeDocNote(user, r.noteId));
         case 'listTraining':   return out(listTraining(user));
         case 'getTraining':    return out(getTraining(user, r.trainId));
         case 'listWarnings':   return out(listWarnings(user));
@@ -1084,7 +1086,35 @@ function getDocSigns(user, docId) {
   tsheet('DocSigns', DS_H);
   const signs = readAll('DocSigns', DS_H).filter(r => r.DocID === docId && isTrue(r.Active)).map(r => ({ SignID: r.SignID, Page: Number(r.Page) || 1, X: Number(r.X), Y: Number(r.Y), W: Number(r.W), Name: r.Name, Role: r.Role, At: r.At, Signature: r.Signature, Mine: norm(r.Email) === norm(user.email) }));
   signs.sort((a, b) => a.At < b.At ? -1 : 1);
-  return { ok: true, signs: signs };
+  tsheet('DocNotes', NT_H);
+  const notes = readAll('DocNotes', NT_H).filter(r => r.DocID === docId && isTrue(r.Active)).map(r => ({ NoteID: r.NoteID, Page: Number(r.Page) || 1, X: Number(r.X), Y: Number(r.Y), W: Number(r.W), Text: r.Text, Name: r.Name, Role: r.Role, At: r.At, Mine: norm(r.Email) === norm(user.email) }));
+  notes.sort((a, b) => a.At < b.At ? -1 : 1);
+  return { ok: true, signs: signs, notes: notes };
+}
+// Notes written on a document copy by HSSE (for example a question to the contractor). Visible to everyone who can see the item. Removing only switches the note off.
+const NT_H = ['NoteID', 'DocID', 'ItemID', 'Page', 'X', 'Y', 'W', 'Text', 'Name', 'Email', 'Role', 'At', 'Active'];
+function addDocNote(user, p) {
+  needSigner_(user);
+  const d = getDocRow(p.docId), it = getItem(d.ItemID);
+  const text = String(p.text || '').replace(/\r/g, '').trim().slice(0, 500);
+  if (!text) throw new Error('Write a note first');
+  const page = Math.max(1, Math.min(200, parseInt(p.page, 10) || 1)), x = Number(p.x), y = Number(p.y);
+  if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) throw new Error('Choose a position on the document');
+  const w = Math.min(0.6, Math.max(0.15, Number(p.w) || 0.3)), id = 'N-' + Utilities.getUuid().slice(0, 8);
+  tsheet('DocNotes', NT_H);
+  addRow('DocNotes', NT_H, { NoteID: id, DocID: d.DocID, ItemID: d.ItemID, Page: page, X: x.toFixed(4), Y: y.toFixed(4), W: w.toFixed(4), Text: text, Name: user.name || user.email, Email: user.email, Role: user.role, At: iso(), Active: 'TRUE' });
+  audit(user, 'docNote', it.ID, d.DocType + ' ' + d.DocID + ' ' + id);
+  return { ok: true, noteId: id };
+}
+function removeDocNote(user, noteId) {
+  needSigner_(user);
+  tsheet('DocNotes', NT_H);
+  const r = readAll('DocNotes', NT_H).filter(x => x.NoteID === noteId)[0];
+  if (!r) throw new Error('Note not found');
+  if (norm(r.Email) !== norm(user.email) && !user.manager) throw new Error('Only the person who wrote it can delete it');
+  r.Active = 'FALSE'; writeRow('DocNotes', NT_H, r);
+  audit(user, 'removeDocNote', r.ItemID, r.DocID + ' ' + noteId);
+  return { ok: true };
 }
 function removeDocSign(user, signId) {
   needSigner_(user);
