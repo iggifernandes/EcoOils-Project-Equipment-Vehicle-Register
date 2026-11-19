@@ -1,5 +1,5 @@
-// VERSION 1.8.1 | Heavy Equipment & Vehicle Register backend | 2026-11-18
-const VERSION = '1.8.1';
+// VERSION 1.8.2 | Heavy Equipment & Vehicle Register backend | 2026-11-18
+const VERSION = '1.8.2';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -989,7 +989,7 @@ function setRemindSettings(user, hour, weekdays) {
 const TRAIN_H = ['TrainID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Score', 'Total', 'Passed', 'Lang', 'Signature', 'RecordedBy', 'ValidUntil', 'Photo', 'Token'];
 const WARN_H = ['WarnID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Violation', 'Level', 'Details', 'IssuedBy', 'Status', 'WithdrawnReason', 'WithdrawnBy'];
 // Correct option index for each of the 10 quiz questions (the page holds the questions; the answer key stays here).
-const QUIZ_KEY = [1, 2, 3, 0, 2, 1, 1, 0, 2, 2, 1];
+const QUIZ_KEY = [1, 2, 3, 0, 2, 1, 1, 0, 2, 2, 1, 1];
 const CRIT_Q = [1, 10]; // flagman questions: must be answered correctly to pass (no flagman = stop driving)
 const TRAIN_PASS = 0.8;       // 80% to pass
 const TRAIN_VALID_DAYS = 365; // refresher interval
