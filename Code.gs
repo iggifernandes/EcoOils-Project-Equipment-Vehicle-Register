@@ -1,5 +1,5 @@
-// VERSION 1.8.0 | Heavy Equipment & Vehicle Register backend | 2026-11-18
-const VERSION = '1.8.0';
+// VERSION 1.8.1 | Heavy Equipment & Vehicle Register backend | 2026-11-18
+const VERSION = '1.8.1';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -97,6 +97,10 @@ function doPost(e) {
       case 'login':        return out(login(r.email, r.pin, r.keep));
       case 'verify':       return out(verifyPublic(r.id, r.t));
       case 'verifyTraining': return out(verifyTraining(r.id, r.t));
+      case 'trainLinkInfo':  return out(trainLinkInfo(r.tl));
+      case 'pubGrade':       return out(pubGrade(r.tl, r.answers));
+      case 'pubSaveTraining': return out(withLock_(() => pubSaveTraining(r.tl, r)));
+      case 'pubGetTraining': return out(pubGetTraining(r.tl, r.trainId, r.t));
       case 'logout':       return out(logout(r.token));
     }
     const user = auth(r.token);
@@ -135,6 +139,7 @@ function doPost(e) {
         case 'removeContact':  return out(removeContact(user, r.contactId));
         case 'gradeTraining':  return out(gradeTraining(user, r.answers));
         case 'saveTraining':   return out(saveTraining(user, r));
+        case 'createTrainLink': return out(createTrainLink(user, r));
         case 'listTraining':   return out(listTraining(user));
         case 'getTraining':    return out(getTraining(user, r.trainId));
         case 'listWarnings':   return out(listWarnings(user));
@@ -984,7 +989,8 @@ function setRemindSettings(user, hour, weekdays) {
 const TRAIN_H = ['TrainID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Score', 'Total', 'Passed', 'Lang', 'Signature', 'RecordedBy', 'ValidUntil', 'Photo', 'Token'];
 const WARN_H = ['WarnID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Violation', 'Level', 'Details', 'IssuedBy', 'Status', 'WithdrawnReason', 'WithdrawnBy'];
 // Correct option index for each of the 10 quiz questions (the page holds the questions; the answer key stays here).
-const QUIZ_KEY = [1, 2, 3, 0, 2, 1, 1, 0, 2, 2];
+const QUIZ_KEY = [1, 2, 3, 0, 2, 1, 1, 0, 2, 2, 1];
+const CRIT_Q = [1, 10]; // flagman questions: must be answered correctly to pass (no flagman = stop driving)
 const TRAIN_PASS = 0.8;       // 80% to pass
 const TRAIN_VALID_DAYS = 365; // refresher interval
 const WARN_MONTHS_DAYS = 365; // warnings count towards the next level for this long
@@ -999,7 +1005,8 @@ function dkey(company, id, name) { return norm(company) + '|' + norm(id || name)
 function gradeAnswers(a) {
   a = Array.isArray(a) ? a : [];
   let score = 0; QUIZ_KEY.forEach((k, i) => { if (Number(a[i]) === k) score++; });
-  return { score: score, total: QUIZ_KEY.length, passed: score / QUIZ_KEY.length >= TRAIN_PASS };
+  const crit = CRIT_Q.every(i => Number(a[i]) === QUIZ_KEY[i]);
+  return { score: score, total: QUIZ_KEY.length, crit: crit, passed: crit && score / QUIZ_KEY.length >= TRAIN_PASS };
 }
 function gradeTraining(user, answers) { return Object.assign({ ok: true }, gradeAnswers(answers)); }
 function trainCompany(user, p) {
@@ -1016,12 +1023,12 @@ function saveTraining(user, p) {
   if (!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(String(p.photo || '')) || p.photo.length > 45000) throw new Error('A selfie photo of the driver is required');
   if (p.agreed !== true) throw new Error('The driver must accept the declaration');
   const g = gradeAnswers(p.answers);
-  if (!g.passed) throw new Error('Quiz not passed (' + g.score + '/' + g.total + ')');
+  if (!g.passed) throw new Error(g.crit ? 'Quiz not passed (' + g.score + '/' + g.total + ')' : 'The flagman questions must be answered correctly');
   tsheet('Training', TRAIN_H);
-  const id = 'T-' + Utilities.getUuid().slice(0, 8), co = trainCompany(user, p);
-  addRow('Training', TRAIN_H, { TrainID: id, Time: iso(), Company: co, DriverName: name, DriverID: String(p.driverId || '').trim(), ItemID: p.itemId || '', Plate: p.plate || '', Score: g.score, Total: g.total, Passed: 'Yes', Lang: p.lang || '', Signature: p.signature, RecordedBy: user.email, ValidUntil: plusDays(TRAIN_VALID_DAYS), Photo: p.photo, Token: Utilities.getUuid().replace(/-/g, '').slice(0, 10).toUpperCase() });
+  const id = 'T-' + Utilities.getUuid().slice(0, 8), co = trainCompany(user, p), tk = Utilities.getUuid().replace(/-/g, '').slice(0, 10).toUpperCase();
+  addRow('Training', TRAIN_H, { TrainID: id, Time: iso(), Company: co, DriverName: name, DriverID: String(p.driverId || '').trim(), ItemID: p.itemId || '', Plate: p.plate || '', Score: g.score, Total: g.total, Passed: 'Yes', Lang: p.lang || '', Signature: p.signature, RecordedBy: user.email, ValidUntil: plusDays(TRAIN_VALID_DAYS), Photo: p.photo, Token: tk });
   audit(user, 'training', id, name + ' ' + g.score + '/' + g.total);
-  return { ok: true, trainId: id };
+  return { ok: true, trainId: id, token: tk };
 }
 // Public QR check for a driver training certificate: name, company, dates, selfie. No ID numbers.
 function verifyTraining(id, tok) {
@@ -1031,6 +1038,45 @@ function verifyTraining(id, tok) {
   if (!r) throw new Error('Invalid QR code');
   const exp = r.ValidUntil || '';
   return { ok: true, v: { TrainID: r.TrainID, DriverName: r.DriverName, Company: r.Company, Date: String(r.Time || '').slice(0, 10), ValidUntil: exp, Score: r.Score, Total: r.Total, Photo: r.Photo || '', Valid: r.Passed === 'Yes' && exp >= todayStr() } };
+}
+// ---------- shareable Defensive Driving training link (no login for the driver) ----------
+// HSSE or an IC creates a link for one company. Anyone holding the link can take the training and sign, and the record is
+// stored against that company with RecordedBy = "link:<creator>". The link expires, and each link is capped at 300 uses.
+const TL_H = ['LinkID', 'Token', 'Company', 'CreatedBy', 'CreatedAt', 'ExpiresAt', 'Active', 'Uses'];
+function withLock_(fn) { const lock = LockService.getScriptLock(); lock.waitLock(30000); try { return fn(); } finally { lock.releaseLock(); } }
+function createTrainLink(user, p) {
+  if (user.role !== 'HSSE' && user.role !== 'IC') throw new Error('Not allowed');
+  const co = trainCompany(user, p), days = Math.min(60, Math.max(1, parseInt(p.days, 10) || 14));
+  tsheet('TrainLinks', TL_H);
+  const tok = Utilities.getUuid().replace(/-/g, '').slice(0, 20), exp = plusDays(days);
+  addRow('TrainLinks', TL_H, { LinkID: 'L-' + Utilities.getUuid().slice(0, 6), Token: tok, Company: co, CreatedBy: user.email, CreatedAt: iso(), ExpiresAt: exp, Active: 'TRUE', Uses: '0' });
+  audit(user, 'trainlink', '', co + ' until ' + exp);
+  return { ok: true, token: tok, company: co, expires: exp };
+}
+function getTrainLink_(tok) {
+  tok = String(tok || '');
+  if (tok.length < 12) throw new Error('This training link is not valid');
+  tsheet('TrainLinks', TL_H);
+  const l = readAll('TrainLinks', TL_H).filter(x => x.Token === tok)[0];
+  if (!l || !isTrue(l.Active)) throw new Error('This training link is not valid');
+  if (String(l.ExpiresAt) < todayStr()) throw new Error('This training link has expired. Ask your HSSE officer for a new one');
+  if ((Number(l.Uses) || 0) >= 300) throw new Error('This training link has reached its limit. Ask your HSSE officer for a new one');
+  return l;
+}
+function trainLinkInfo(tok) { const l = getTrainLink_(tok); return { ok: true, company: l.Company, expires: l.ExpiresAt }; }
+function pubGrade(tok, answers) { getTrainLink_(tok); return gradeTraining(null, answers); }
+function pubSaveTraining(tok, p) {
+  const l = getTrainLink_(tok);
+  const r = saveTraining({ role: 'IC', company: l.Company, email: 'link:' + l.CreatedBy, name: 'Training link' }, p);
+  l.Uses = String((Number(l.Uses) || 0) + 1); writeRow('TrainLinks', TL_H, l);
+  return r;
+}
+function pubGetTraining(tok, id, t) {
+  const l = getTrainLink_(tok);
+  tsheet('Training', TRAIN_H);
+  const r = readAll('Training', TRAIN_H).filter(x => x.TrainID === id)[0];
+  if (!r || !t || r.Token !== t || norm(r.Company) !== norm(l.Company)) throw new Error('Record not found');
+  return { ok: true, record: strip(r) };
 }
 function canSeeCo(user, co) { return user.role === 'HSSE' || user.role === 'Viewer' || user.role === 'Inspector' || (user.role === 'IC' && norm(co) === norm(user.company)); }
 function listTraining(user) {
