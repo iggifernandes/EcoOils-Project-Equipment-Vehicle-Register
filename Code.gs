@@ -1,5 +1,5 @@
-// VERSION 1.8.6 | Heavy Equipment & Vehicle Register backend | 2026-11-18
-const VERSION = '1.8.6';
+// VERSION 1.8.7 | Heavy Equipment & Vehicle Register backend | 2026-11-18
+const VERSION = '1.8.7';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -26,6 +26,8 @@ const VF_H = ['VerID','ItemID','Plate','Company','Type','DateTime','By','ByName'
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const MIMES = ['application/pdf', 'image/jpeg', 'image/png'];
+// Heavy equipment that travels on public roads on its own wheels: also needs STNK and PKB vehicle tax, like a vehicle.
+const ROAD_EQ = ['Truck-mounted crane / boom truck', 'Knuckle boom / loader crane'];
 const KIR_EXEMPT = ['Light vehicle', 'Motorcycle'];
 // Lifting equipment (needs the rigger / signalman certificate and the wire-rope and hook check). Keep in step with LIFTT in index.html.
 const LIFT = ['Mobile crane', 'All-terrain crane', 'Rough-terrain crane', 'Truck-mounted crane / boom truck', 'Knuckle boom / loader crane', 'Pick and carry crane', 'Crawler crane', 'Mini / spider crane', 'Tower crane', 'Overhead / gantry crane', 'Telescopic handler (telehandler)', 'Pipelayer / side boom', 'Hoist / chain block'];
@@ -58,7 +60,9 @@ function docRules(i) {
     if (KIR_EXEMPT.indexOf(i.Type) < 0) R.push(['kir', 1, 1]);
     if (i.Type === 'Tanker truck') R.push(['b3', 2, 0]);
   } else {
-    R.push(['idplate', 0, 0], ['silo', 1, 1], ['rep', 1, 1]);
+    R.push(['idplate', 0, 0]);
+    if (ROAD_EQ.indexOf(i.Type) >= 0) R.push(['stnk', 1, 1], ['pkb', 1, 0]);
+    R.push(['silo', 1, 1], ['rep', 1, 1]);
     if (i.CertOutside === 'Yes') R.push(['end', 2, 0]); // certificate issued outside Sumatera Utara must be endorsed by Disnaker Sumut
     R.push(['sio', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ins', 1, 0], ['insack', 0, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (LIFT.indexOf(i.Type) >= 0) R.push(['rig', 1, 1]);
