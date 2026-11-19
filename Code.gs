@@ -1,5 +1,5 @@
-// VERSION 1.8.2 | Heavy Equipment & Vehicle Register backend | 2026-11-18
-const VERSION = '1.8.2';
+// VERSION 1.8.3 | Heavy Equipment & Vehicle Register backend | 2026-11-18
+const VERSION = '1.8.3';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -140,6 +140,11 @@ function doPost(e) {
         case 'gradeTraining':  return out(gradeTraining(user, r.answers));
         case 'saveTraining':   return out(saveTraining(user, r));
         case 'createTrainLink': return out(createTrainLink(user, r));
+        case 'saveSignature':  return out(saveSignature(user, r));
+        case 'getMySignature': return out(getMySignature(user));
+        case 'signDoc':        return out(signDoc(user, r));
+        case 'getDocSigns':    return out(getDocSigns(user, r.docId));
+        case 'removeDocSign':  return out(removeDocSign(user, r.signId));
         case 'listTraining':   return out(listTraining(user));
         case 'getTraining':    return out(getTraining(user, r.trainId));
         case 'listWarnings':   return out(listWarnings(user));
@@ -1039,6 +1044,59 @@ function verifyTraining(id, tok) {
   const exp = r.ValidUntil || '';
   return { ok: true, v: { TrainID: r.TrainID, DriverName: r.DriverName, Company: r.Company, Date: String(r.Time || '').slice(0, 10), ValidUntil: exp, Score: r.Score, Total: r.Total, Photo: r.Photo || '', Valid: r.Passed === 'Yes' && exp >= todayStr() } };
 }
+// ---------- HSSE signature on uploaded documents ----------
+// The HSSE user saves a signature image once. Signing a document places that image where the user clicks and stamps the signer name and the SERVER date and time.
+// Each stamp is a permanent record (signature image snapshot, who, when, where). Removing a stamp only switches it off; the row stays.
+const SIG_H = ['Email', 'Name', 'Signature', 'UpdatedAt'];
+const DS_H = ['SignID', 'DocID', 'ItemID', 'Page', 'X', 'Y', 'W', 'Name', 'Email', 'Role', 'At', 'Signature', 'Active'];
+function needSigner_(user) { if (user.role !== 'HSSE') throw new Error('HSSE rights required'); }
+function mySigRow_(user) { tsheet('Signatures', SIG_H); return readAll('Signatures', SIG_H).filter(x => norm(x.Email) === norm(user.email))[0]; }
+function saveSignature(user, p) {
+  needSigner_(user);
+  const sig = String(p.sig || '');
+  if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(sig) || sig.length > 45000) throw new Error('The signature must be a PNG picture, small enough to store');
+  const m = mySigRow_(user);
+  if (m) { m.Signature = sig; m.Name = user.name || user.email; m.UpdatedAt = iso(); writeRow('Signatures', SIG_H, m); }
+  else addRow('Signatures', SIG_H, { Email: user.email, Name: user.name || user.email, Signature: sig, UpdatedAt: iso() });
+  audit(user, 'signature', '', 'saved');
+  return { ok: true };
+}
+function getMySignature(user) {
+  needSigner_(user);
+  const m = mySigRow_(user);
+  return { ok: true, sig: m ? m.Signature : '', name: user.name || user.email };
+}
+function signDoc(user, p) {
+  needSigner_(user);
+  const d = getDocRow(p.docId), it = getItem(d.ItemID);
+  const m = mySigRow_(user);
+  if (!m || !m.Signature) throw new Error('Save your signature first');
+  const page = Math.max(1, Math.min(200, parseInt(p.page, 10) || 1)), x = Number(p.x), y = Number(p.y);
+  if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) throw new Error('Choose a position on the document');
+  const w = Math.min(0.5, Math.max(0.08, Number(p.w) || 0.25)), id = 'S-' + Utilities.getUuid().slice(0, 8);
+  addRow('DocSigns', DS_H, { SignID: id, DocID: d.DocID, ItemID: d.ItemID, Page: page, X: x.toFixed(4), Y: y.toFixed(4), W: w.toFixed(4), Name: user.name || user.email, Email: user.email, Role: user.role, At: iso(), Signature: m.Signature, Active: 'TRUE' });
+  audit(user, 'signDoc', it.ID, d.DocType + ' ' + d.DocID + ' ' + id);
+  return { ok: true, signId: id };
+}
+function getDocSigns(user, docId) {
+  const d = getDocRow(docId), it = getItem(d.ItemID);
+  if (!canSee(user, it)) throw new Error('Not allowed');
+  tsheet('DocSigns', DS_H);
+  const signs = readAll('DocSigns', DS_H).filter(r => r.DocID === docId && isTrue(r.Active)).map(r => ({ SignID: r.SignID, Page: Number(r.Page) || 1, X: Number(r.X), Y: Number(r.Y), W: Number(r.W), Name: r.Name, Role: r.Role, At: r.At, Signature: r.Signature, Mine: norm(r.Email) === norm(user.email) }));
+  signs.sort((a, b) => a.At < b.At ? -1 : 1);
+  return { ok: true, signs: signs };
+}
+function removeDocSign(user, signId) {
+  needSigner_(user);
+  tsheet('DocSigns', DS_H);
+  const r = readAll('DocSigns', DS_H).filter(x => x.SignID === signId)[0];
+  if (!r) throw new Error('Signature not found');
+  if (norm(r.Email) !== norm(user.email) && !user.manager) throw new Error('Only the person who signed can remove it');
+  r.Active = 'FALSE'; writeRow('DocSigns', DS_H, r);
+  audit(user, 'removeDocSign', r.ItemID, r.DocID + ' ' + signId);
+  return { ok: true };
+}
+
 // ---------- shareable Defensive Driving training link (no login for the driver) ----------
 // HSSE or an IC creates a link for one company. Anyone holding the link can take the training and sign, and the record is
 // stored against that company with RecordedBy = "link:<creator>". The link expires, and each link is capped at 300 uses.
