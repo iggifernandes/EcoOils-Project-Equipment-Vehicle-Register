@@ -1,10 +1,11 @@
-// VERSION 1.8.7 | Heavy Equipment & Vehicle Register backend | 2026-11-18
-const VERSION = '1.8.7';
+// VERSION 1.8.8 | Heavy Equipment & Vehicle Register backend | 2026-11-18
+const VERSION = '1.8.8';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
 
-const EQ_H = ['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','OperatorLicenceClass','Status','LocationStatus','NextInspection','DecisionNote','Remarks','SubmittedBy','SubmittedAt','DecidedBy','DecidedAt','UpdatedAt','YearMfg','CertOutside','AgeOverride','InspBy','InspAt','InspRes','InspChk','InspNote'];
+const EQ_H_BASE = ['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','OperatorLicenceClass','Status','LocationStatus','NextInspection','DecisionNote','Remarks','SubmittedBy','SubmittedAt','DecidedBy','DecidedAt','UpdatedAt','YearMfg','CertOutside','AgeOverride','InspBy','InspAt','InspRes','InspChk','InspNote'];
+const EQ_H = EQ_H_BASE.concat(['InsMode']); // InsMode: 'policy' (insurance policy) or 'ack' (signed Insurance Responsibility Acknowledgement); the other document is hidden for that entry
 const DOC_H = ['DocID','ItemID','DocType','Number','Expiry','FileName','FileId','UploadedBy','UploadedAt','Verified','VerifiedBy','VerifiedAt','Note','Current','RemoveReq'];
 const ST_H = ['StickerNo','ItemID','Token','IssuedAt','IssuedBy','Status','PrintCount','PrintedAt','PrintedBy','ReprintAllowed','ReprintReason','VoidReason','VoidedBy','VoidedAt'];
 const IN_H = ['InspID','ItemID','Date','Inspector','Kind','Result','Checklist','Notes'];
@@ -53,10 +54,15 @@ const DOCL = { end: 'Disnaker Sumut endorsement', ind: 'Driver / operator site i
 
 const IDPLATE_FROM = '2026-11-17'; // identification plate photo is required for all Heavy Equipment from this date; entries approved earlier are not penalised until re-inspection
 const OPTIONAL_DOCS = ['own', 'insack']; // ownership/rental agreement is a commercial matter between the IC and its vendor
-function docRules(i) {
-  const R = [];
+// Insurance mode: 'ack' = signed acknowledgement letter replaces the policy for this entry. Older entries with no choice yet and an acknowledgement on file count as 'ack'.
+function insMode_(i, docs) {
+  if (i.InsMode === 'ack' || i.InsMode === 'policy') return i.InsMode;
+  return docs && docs.some(d => d.ItemID === i.ID && d.DocType === 'insack' && isTrue(d.Current)) ? 'ack' : 'policy';
+}
+function docRules(i, docs) {
+  const R = [], ack = insMode_(i, docs) === 'ack';
   if (i.Category === 'Vehicle') {
-    R.push(['stnk', 1, 1], ['pkb', 1, 0], ['swd', 1, 0], ['own', 2, 0], ['ins', 1, 0], ['insack', 0, 0], ['sim', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ddc', 1, 0], ['photo', 0, 0], ['chk', 0, 0]);
+    R.push(['stnk', 1, 1], ['pkb', 1, 0], ['swd', 1, 0], ['own', 2, 0], ack ? ['insack', 0, 0] : ['ins', 1, 0], ['sim', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ddc', 1, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (KIR_EXEMPT.indexOf(i.Type) < 0) R.push(['kir', 1, 1]);
     if (i.Type === 'Tanker truck') R.push(['b3', 2, 0]);
   } else {
@@ -64,11 +70,11 @@ function docRules(i) {
     if (ROAD_EQ.indexOf(i.Type) >= 0) R.push(['stnk', 1, 1], ['pkb', 1, 0]);
     R.push(['silo', 1, 1], ['rep', 1, 1]);
     if (i.CertOutside === 'Yes') R.push(['end', 2, 0]); // certificate issued outside Sumatera Utara must be endorsed by Disnaker Sumut
-    R.push(['sio', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ins', 1, 0], ['insack', 0, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
+    R.push(['sio', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ack ? ['insack', 0, 0] : ['ins', 1, 0], ['own', 2, 0], ['man', 0, 0], ['mnt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (LIFT.indexOf(i.Type) >= 0) R.push(['rig', 1, 1]);
   }
   // Optional documents (not required for approval or fitness): commercial arrangements between the IC and its vendor.
-  return R.map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: OPTIONAL_DOCS.indexOf(r[0]) >= 0 || (r[0] === 'idplate' && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < IDPLATE_FROM) }));
+  return R.map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: (OPTIONAL_DOCS.indexOf(r[0]) >= 0 && r[0] !== 'insack') || (r[0] === 'idplate' && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < IDPLATE_FROM) }));
 }
 
 function inspItems(i) {
@@ -119,6 +125,7 @@ function doPost(e) {
       switch (r.action) {
         case 'list':           return out(listAll(user));
         case 'saveItem':       return out(saveItem(user, r.item));
+        case 'setInsMode':     return out(setInsMode(user, r.itemId, r.mode));
         case 'setLocation':    return out(setLocation(user, r.itemId, r.location));
         case 'deleteItem':     return out(deleteItem(user, r.itemId, r.pin, r.reason));
         case 'submit':         return out(submitItem(user, r.itemId, r.confirmed));
@@ -209,7 +216,18 @@ function fmtDate(v) {
   if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   return v === null || v === undefined ? '' : String(v);
 }
+var ENS_ = {};
+// Adds missing header cells / columns once per run, so a new column (such as InsMode) needs no manual sheet edit.
+function ensureCols_(name, H) {
+  if (ENS_[name]) return; ENS_[name] = 1;
+  const sh = sheet(name); if (!sh) return;
+  if (sh.getMaxColumns() < H.length) sh.insertColumnsAfter(sh.getMaxColumns(), H.length - sh.getMaxColumns());
+  const hr = sh.getRange(1, 1, 1, H.length), hdr = hr.getValues()[0]; let ch = false;
+  H.forEach((h, j) => { if (!hdr[j]) { hdr[j] = h; ch = true; } });
+  if (ch) hr.setValues([hdr]);
+}
 function readAll(name, H) {
+  ensureCols_(name, H);
   const v = sheet(name).getDataRange().getValues(), out = [];
   for (let i = 1; i < v.length; i++) {
     const o = { _row: i + 1 };
@@ -219,8 +237,8 @@ function readAll(name, H) {
   return out;
 }
 function rowVals(H, o) { return H.map(h => o[h] === undefined || o[h] === null ? '' : o[h]); }
-function writeRow(name, H, o) { sheet(name).getRange(o._row, 1, 1, H.length).setValues([rowVals(H, o)]); }
-function addRow(name, H, o) { sheet(name).appendRow(rowVals(H, o)); }
+function writeRow(name, H, o) { ensureCols_(name, H); sheet(name).getRange(o._row, 1, 1, H.length).setValues([rowVals(H, o)]); }
+function addRow(name, H, o) { ensureCols_(name, H); sheet(name).appendRow(rowVals(H, o)); }
 function strip(o) { const c = Object.assign({}, o); delete c._row; return c; }
 function audit(user, action, itemId, detail) { addRow('Audit', AU_H, { Time: iso(), User: user.email, Action: action, ItemID: itemId, Detail: detail || '' }); }
 
@@ -328,7 +346,7 @@ function getItem(id) {
 // For each required document: 'ok' needs a HSSE-verified, unexpired document. A newer unverified
 // upload (renewal) never replaces a still-valid verified one until HSSE verifies it.
 function ruleStates(item, allDocs, today) {
-  return docRules(item).map(r => {
+  return docRules(item, allDocs).map(r => {
     const cur = allDocs.filter(d => d.ItemID === item.ID && d.DocType === r.k && isTrue(d.Current))
       .sort((a, b) => a.UploadedAt < b.UploadedAt ? 1 : -1);
     const o = { k: r.k, exp: r.exp, num: r.num, opt: r.opt, s: 'missing', docId: '', pendingId: '' };
@@ -368,7 +386,7 @@ function listAll(user) {
   const ids = {}; items.forEach(i => ids[i.ID] = 1);
   const outItems = items.map(i => {
     const f = fitness(i, docsAll, today), o = strip(i);
-    o.Fit = f.state; o.FitWhy = f.why; o.Rules = ruleStates(i, docsAll, today); o.Check = inspItems(i);
+    o.Fit = f.state; o.FitWhy = f.why; o.Rules = ruleStates(i, docsAll, today); o.Check = inspItems(i); o.InsMode = insMode_(i, docsAll);
     return o;
   });
   const docs = docsAll.filter(d => ids[d.ItemID]).map(d => ({ DocID: d.DocID, ItemID: d.ItemID, DocType: d.DocType, Number: user.role === 'Viewer' ? '' : d.Number, Expiry: d.Expiry, FileName: d.FileName, UploadedBy: d.UploadedBy, UploadedAt: d.UploadedAt, Verified: d.Verified, VerifiedBy: d.VerifiedBy, Note: d.Note, RemoveReq: d.RemoveReq || '' }));
@@ -425,6 +443,19 @@ function saveItem(user, item) {
 
 const LOCATIONS = ['On-site', 'Off-site', 'Under repair', 'Removed'];
 // Location is operational, so HSSE and the entry's own contractor can change it at any status.
+// The small tick on the insurance row: policy or signed acknowledgement. Only one of the two is asked for that entry.
+function setInsMode(user, id, mode) {
+  if (mode !== 'ack' && mode !== 'policy') throw new Error('Invalid choice');
+  const cur = getItem(id);
+  if (user.role === 'Viewer' || !canWork(user, cur)) throw new Error('Not allowed');
+  if (user.role === 'IC' && ['Draft', 'Rejected', 'Void'].indexOf(cur.Status) < 0) throw new Error('Entry is locked while with HSSE. Ask HSSE to change it');
+  const from = insMode_(cur, readAll('Documents', DOC_H).filter(d => isTrue(d.Current)));
+  if (from === mode && cur.InsMode === mode) return { ok: true };
+  cur.InsMode = mode; cur.UpdatedAt = iso();
+  writeRow('Equipment', EQ_H, cur);
+  audit(user, 'insMode', id, from + ' -> ' + mode);
+  return { ok: true };
+}
 function setLocation(user, id, loc) {
   if (LOCATIONS.indexOf(loc) < 0) throw new Error('Invalid location');
   const cur = getItem(id);
@@ -472,7 +503,7 @@ const YEAR_DOCS = ['mcu', 'ind', 'ddc']; // 1-year validity from issue date
 function uploadDoc(user, p) {
   const it = getItem(p.itemId);
   if (!canWork(user, it)) throw new Error('Not allowed');
-  const rule = docRules(it).filter(r => r.k === p.docType)[0];
+  const rule = docRules(it, readAll('Documents', DOC_H)).filter(r => r.k === p.docType)[0];
   if (!rule) throw new Error('This document is not required for this entry');
   if (rule.num && !String(p.number || '').trim()) throw new Error('Document number is required');
   // Documents with a fixed 1-year validity (medical fit, site induction, defensive driving certificate): the issue date is required and the validity is issue date + 1 year. The issue date is kept in Note.
@@ -591,7 +622,7 @@ function moveDoc(user, docId, toItemId) {
   const d = getDocRow(docId), from = getItem(d.ItemID), to = getItem(String(toItemId || '').trim());
   if (!to) throw new Error('Target entry not found');
   if (to.ID === from.ID) throw new Error('Choose a different entry');
-  if (!docRules(to).filter(r => r.k === d.DocType)[0]) throw new Error('The target entry does not use this document type');
+  if (!docRules(to, readAll('Documents', DOC_H)).filter(r => r.k === d.DocType)[0]) throw new Error('The target entry does not use this document type');
   try { DriveApp.getFileById(d.FileId).moveTo(itemFolder(to.ID, to.Company, to.Category)); } catch (e) { console.log('Drive move failed: ' + e); }
   if (d.DocType !== 'photo') readAll('Documents', DOC_H).forEach(o => { if (o.ItemID === to.ID && o.DocType === d.DocType && isTrue(o.Current) && o.DocID !== d.DocID) { o.Current = 'FALSE'; writeRow('Documents', DOC_H, o); } });
   d.ItemID = to.ID; d.Verified = ''; d.VerifiedBy = ''; d.VerifiedAt = ''; d.RemoveReq = ''; d.Note = (d.Note ? d.Note + ' | ' : '') + 'Moved from ' + from.ID + ' by ' + user.email + ' ' + iso();
