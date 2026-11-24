@@ -1,5 +1,5 @@
-// VERSION 1.8.8 | Heavy Equipment & Vehicle Register backend | 2026-11-18
-const VERSION = '1.8.8';
+// VERSION 1.8.9 | Heavy Equipment & Vehicle Register backend | 2026-11-24
+const VERSION = '1.8.9';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -120,6 +120,7 @@ function doPost(e) {
       case 'logout':       return out(logout(r.token));
     }
     const user = auth(r.token);
+    if (user.officer && MGR_ONLY[r.action]) throw new Error('Only the HSSE Manager can do this');
     const lock = LockService.getScriptLock(); lock.waitLock(30000);
     try {
       switch (r.action) {
@@ -329,12 +330,15 @@ function userObj(u) {
 function effRole(role, company) {
   const r = norm(role), eco = norm(company) === 'ecooils';
   if (r.indexOf('view') === 0) return 'Viewer';
-  if (eco && (r.indexOf('inspect') === 0 || r.indexOf('hsse officer') === 0)) return 'Inspector'; // HSSE Officer: view, record inspections, verify arrivals (never approve, delete or admin)
+  if (eco && r.indexOf('inspect') === 0) return 'Inspector'; // Inspector: view and record inspections only
+  // HSSE Officer (v1.8.9): works as HSSE (view, verify documents, inspect, approve, issue the QR sticker, sign). Manager-only actions are blocked in MGR_ONLY below.
   if (eco) return (r.indexOf('hsse') === 0 || r.indexOf('admin') === 0) ? 'HSSE' : 'Viewer';
   return 'IC';
 }
 function canSee(u, it) { return u.role === 'HSSE' || u.role === 'Viewer' || u.role === 'Inspector' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
 function canWork(u, it) { return u.role === 'HSSE' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
+// Actions an HSSE Officer can NOT do (HSSE Manager only). Everything else the HSSE role can do, an officer can do.
+const MGR_ONLY = { deleteItem: 1, voidItem: 1, ageOverride: 1, allowReprint: 1, voidDoc: 1, reconsiderDoc: 1, declineRemoval: 1, editDocExpiry: 1, moveDoc: 1, listOfficers: 1, saveOfficer: 1, setOfficerActive: 1, listContacts: 1, saveContact: 1, removeContact: 1, forceReminders: 1, setContactReminders: 1, getRemindSettings: 1, setRemindSettings: 1, sendRemindersNow: 1, issueWarning: 1, withdrawWarning: 1 };
 function needHSSE(u) { if (u.role !== 'HSSE') throw new Error('HSSE rights required'); }
 function getItem(id) {
   const it = readAll('Equipment', EQ_H).filter(x => x.ID === id)[0];
