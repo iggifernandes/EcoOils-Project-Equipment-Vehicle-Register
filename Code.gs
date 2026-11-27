@@ -1,11 +1,11 @@
-// VERSION 1.9.0 | Heavy Equipment & Vehicle Register backend | 2026-11-25
-const VERSION = '1.9.0';
+// VERSION 1.9.1 | Heavy Equipment & Vehicle Register backend | 2026-11-25
+const VERSION = '1.9.1';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
 
 const EQ_H_BASE = ['ID','Category','Type','MakeModel','PlateSerial','Company','OperatorName','OperatorLicenceClass','Status','LocationStatus','NextInspection','DecisionNote','Remarks','SubmittedBy','SubmittedAt','DecidedBy','DecidedAt','UpdatedAt','YearMfg','CertOutside','AgeOverride','InspBy','InspAt','InspRes','InspChk','InspNote'];
-const EQ_H = EQ_H_BASE.concat(['InsMode']); // InsMode: 'policy' (insurance policy) or 'ack' (signed Insurance Responsibility Acknowledgement); the other document is hidden for that entry
+const EQ_H = EQ_H_BASE.concat(['InsMode', 'SiteUse']); // InsMode: 'policy' (insurance policy) or 'ack' (signed Insurance Responsibility Acknowledgement); the other document is hidden for that entry
 const DOC_H = ['DocID','ItemID','DocType','Number','Expiry','FileName','FileId','UploadedBy','UploadedAt','Verified','VerifiedBy','VerifiedAt','Note','Current','RemoveReq'];
 const ST_H = ['StickerNo','ItemID','Token','IssuedAt','IssuedBy','Status','PrintCount','PrintedAt','PrintedBy','ReprintAllowed','ReprintReason','VoidReason','VoidedBy','VoidedAt'];
 const IN_H = ['InspID','ItemID','Date','Inspector','Kind','Result','Checklist','Notes'];
@@ -56,6 +56,8 @@ const IDPLATE_FROM = '2026-11-17'; // identification plate photo is required for
 const PHOTO_SIDES = ['ph_f', 'ph_r', 'ph_l', 'ph_rt']; // v1.9.0: four mandatory side photos (front, rear, left, right); 'photo' is now only for extra photos
 const PHOTO4_FROM = '2026-11-25'; // entries approved before this date are not penalised for missing side photos until they are inspected again
 const OPTIONAL_DOCS = ['own', 'insack', 'photo']; // ownership/rental agreement is a commercial matter between the IC and its vendor
+// v1.9.1 Off-site-only vehicles (staff transport outside the project, never enter site): no site induction, QR says OFF-SITE ONLY and is valid to the earliest document expiry.
+function offsite_(i) { return i && i.Category === 'Vehicle' && i.SiteUse === 'offsite'; }
 // Insurance mode: 'ack' = signed acknowledgement letter replaces the policy for this entry. Older entries with no choice yet and an acknowledgement on file count as 'ack'.
 function insMode_(i, docs) {
   if (i.InsMode === 'ack' || i.InsMode === 'policy') return i.InsMode;
@@ -76,7 +78,7 @@ function docRules(i, docs) {
     if (LIFT.indexOf(i.Type) >= 0) R.push(['rig', 1, 1]);
   }
   // Optional documents (not required for approval or fitness): commercial arrangements between the IC and its vendor.
-  return R.map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: (OPTIONAL_DOCS.indexOf(r[0]) >= 0 && r[0] !== 'insack') || (PHOTO_SIDES.indexOf(r[0]) >= 0 && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < PHOTO4_FROM) || (r[0] === 'idplate' && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < IDPLATE_FROM) }));
+  return R.filter(r => !(r[0] === 'ind' && offsite_(i))).map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: (OPTIONAL_DOCS.indexOf(r[0]) >= 0 && r[0] !== 'insack') || (PHOTO_SIDES.indexOf(r[0]) >= 0 && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < PHOTO4_FROM) || (r[0] === 'idplate' && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < IDPLATE_FROM) }));
 }
 
 function inspItems(i) {
@@ -420,16 +422,26 @@ function saveItem(user, item) {
   const yr = String(item.YearMfg || '').trim(), maxY = parseInt(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy'), 10) + 1;
   if (yr && (!/^\d{4}$/.test(yr) || +yr < 1970 || +yr > maxY)) throw new Error('Year of manufacture must be a 4-digit year');
   if (!item.ID && !yr) throw new Error('Year of manufacture is required');
+  const su = item.Category === 'Vehicle' && item.SiteUse === 'offsite' ? 'offsite' : '';
   const certOut = item.Category === 'Heavy Equipment' && item.CertOutside === 'Yes' ? 'Yes' : '';
   if (item.ID) {
     const cur = getItem(item.ID);
     if (!canWork(user, cur)) throw new Error('Not allowed');
     if (cur.Status === 'Approved' && (cur.Category !== item.Category || cur.Type !== item.Type || cur.PlateSerial !== plate)) throw new Error('Void the inspection first to change category, type or plate');
     if (user.role === 'IC' && ['Draft', 'Rejected', 'Void'].indexOf(cur.Status) < 0 && (cur.Category !== item.Category || cur.Type !== item.Type)) throw new Error('Entry is locked while with HSSE');
-    if (user.role === 'IC' && ['Draft', 'Rejected', 'Void'].indexOf(cur.Status) < 0 && ((yr && cur.YearMfg !== yr) || cur.CertOutside !== certOut)) throw new Error('Entry is locked while with HSSE');
+    if (user.role === 'IC' && ['Draft', 'Rejected', 'Void'].indexOf(cur.Status) < 0 && ((yr && cur.YearMfg !== yr) || cur.CertOutside !== certOut || (cur.SiteUse || '') !== su)) throw new Error('Entry is locked while with HSSE');
     F.forEach(f => cur[f] = item[f] || '');
     if (yr && cur.YearMfg !== yr) { cur.YearMfg = yr; cur.AgeOverride = ''; }
     cur.CertOutside = certOut;
+    if ((cur.SiteUse || '') !== su) {
+      const was = cur.SiteUse || 'site';
+      cur.SiteUse = su;
+      if (cur.Status === 'Approved') { // the printed pass says the wrong thing now: retire it and send the entry back for HSSE re-verification
+        readAll('Stickers', ST_H).filter(s => s.ItemID === cur.ID && s.Status === 'Active').forEach(s => { s.Status = 'Superseded'; writeRow('Stickers', ST_H, s); });
+        cur.Status = 'Submitted'; cur.DecisionNote = 'Use changed to ' + (su || 'site') + ': HSSE re-verification and a new QR pass are required';
+      }
+      audit(user, 'siteUse', cur.ID, was + ' -> ' + (su || 'site'));
+    }
     cur.PlateSerial = plate; cur.UpdatedAt = now;
     if (user.role === 'HSSE') { cur.Company = item.Company || cur.Company; cur.LocationStatus = item.LocationStatus || cur.LocationStatus; }
     writeRow('Equipment', EQ_H, cur);
@@ -438,7 +450,7 @@ function saveItem(user, item) {
   }
   const o = { Status: 'Draft', LocationStatus: LOCATIONS.indexOf(item.LocationStatus) >= 0 ? item.LocationStatus : 'Off-site', PlateSerial: plate, UpdatedAt: now };
   F.forEach(f => o[f] = item[f] || '');
-  o.YearMfg = yr; o.CertOutside = certOut;
+  o.YearMfg = yr; o.CertOutside = certOut; o.SiteUse = su;
   o.Company = user.role === 'IC' ? user.company : (item.Company || '');
   if (!o.Company) throw new Error('Company is required');
   o.ID = nextId(o.Category);
@@ -691,8 +703,10 @@ function approve(user, id, checklist, notes, kindIn) {
   const need = inspItems(it), failed = need.filter(k => !checklist || !(checklist[k] === true || (naOk_(k, checklist) && checklist[k] === 'na')));
   if (failed.length) throw new Error('Physical inspection incomplete: ' + failed.length + ' checklist item(s) not passed');
   coreNa_(checklist, notes);
-  let minExp = plusDays(REINSPECT_DAYS);
+  const offs = offsite_(it);
+  let minExp = offs ? '9999-12-31' : plusDays(REINSPECT_DAYS);
   rs.forEach(r => { const d = docs.filter(x => x.DocID === r.docId)[0]; if (d && d.Expiry && d.Expiry < minExp) minExp = d.Expiry; });
+  if (minExp === '9999-12-31') minExp = plusDays(REINSPECT_DAYS);
   const kind = INSP_KINDS.indexOf(kindIn) >= 0 ? kindIn : (it.Status === 'Submitted' ? 'Pre-mobilisation' : 'Monthly');
   addRow('Inspections', IN_H, { InspID: 'I-' + Utilities.getUuid().slice(0, 8), ItemID: id, Date: iso(), Inspector: user.email, Kind: kind, Result: 'Pass', Checklist: JSON.stringify(checklist), Notes: notes || '' });
   it.Status = 'Approved'; it.NextInspection = minExp; it.DecidedBy = user.email; it.DecidedAt = iso(); it.DecisionNote = notes || ''; it.UpdatedAt = iso();
@@ -833,7 +847,7 @@ function verifyPublic(id, tok) {
     const d = r.docId ? docs.filter(x => x.DocID === r.docId)[0] : null, exp = d && d.Expiry ? d.Expiry : '';
     return { k: r.k, s: r.s, exp: exp, days: exp ? daysBetween(today, exp) : null, pending: !!r.pendingId };
   });
-  return { ok: true, v: { ID: it.ID, Category: it.Category, Type: it.Type, MakeModel: it.MakeModel, PlateSerial: it.PlateSerial, Company: it.Company, StickerNo: st.StickerNo, IssuedAt: st.IssuedAt, NextInspection: it.NextInspection, Fit: f.state, Why: f.why, Docs: rs, AsOf: iso() } };
+  return { ok: true, v: { ID: it.ID, Category: it.Category, Type: it.Type, MakeModel: it.MakeModel, PlateSerial: it.PlateSerial, Company: it.Company, StickerNo: st.StickerNo, IssuedAt: st.IssuedAt, NextInspection: it.NextInspection, SiteUse: offsite_(it) ? 'offsite' : '', ValidUntil: offsite_(it) ? it.NextInspection : '', Fit: f.state, Why: f.why, Docs: rs, AsOf: iso() } };
 }
 
 // ---------- contacts (who receives reminders) ----------
@@ -920,6 +934,7 @@ function verifyArrival(user, p) {
   const it = getItem(p.itemId);
   if (res === 'Rejected' && reason.length < 5) throw new Error('Give the reason for rejecting this vehicle');
   if (res === 'Accepted') {
+    if (offsite_(it)) throw new Error('OFF-SITE ONLY vehicle: not allowed on site. Do not accept it.');
     if (it.Status !== 'Approved') throw new Error('This entry is not approved by HSSE yet');
     const f = fitness(it, readAll('Documents', DOC_H).filter(d => isTrue(d.Current)), todayStr());
     if (f.state !== 'FIT') throw new Error('Cannot accept: not FIT. ' + (f.why || []).join('; '));
