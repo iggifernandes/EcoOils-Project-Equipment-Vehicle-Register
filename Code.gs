@@ -1,5 +1,5 @@
-// VERSION 1.9.1 | Heavy Equipment & Vehicle Register backend | 2026-11-25
-const VERSION = '1.9.1';
+// VERSION 1.9.2 | Heavy Equipment & Vehicle Register backend | 2026-11-28
+const VERSION = '1.9.2';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -50,14 +50,15 @@ function ageInfo(it) {
 }
 
 // Required documents. exp: 1 = expiry required, 2 = expiry optional, 0 = none. num: document number required.
-const DOCL = { ph_f: 'Photo: front', ph_r: 'Photo: rear', ph_l: 'Photo: left side', ph_rt: 'Photo: right side', end: 'Disnaker Sumut endorsement', ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance (policy OR signed Insurance Responsibility Acknowledgement)', insack: 'Insurance Responsibility Acknowledgement (signed)', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', idplate: 'Equipment identification plate photo', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
+const DOCL = { vperm: 'Company transport permit (izin angkutan) or NIB', sim2: 'Second driver SIM', ph_f: 'Photo: front', ph_r: 'Photo: rear', ph_l: 'Photo: left side', ph_rt: 'Photo: right side', end: 'Disnaker Sumut endorsement', ind: 'Driver / operator site induction certificate', swd: 'SWDKLLJ accident fund (Jasa Raharja)', stnk: 'STNK', pkb: 'PKB vehicle tax', own: 'Ownership (BPKB copy) or rental agreement', ins: 'Insurance (policy OR signed Insurance Responsibility Acknowledgement)', insack: 'Insurance Responsibility Acknowledgement (signed)', sim: 'Driver SIM', mcu: 'Medical fit (MCU)', ddc: 'Defensive driving certificate', photo: 'Photos', idplate: 'Equipment identification plate photo', chk: 'Pre-mobilisation checklist', kir: 'KIR periodic test', b3: 'B3 permit / TREM card / SDS', silo: 'SILO', rep: 'PJK3 inspection & load test report', sio: 'Operator SIO', rig: 'Rigger / signalman certificate', man: 'Manual / load chart / data plate', mnt: 'Maintenance record' };
 
 const IDPLATE_FROM = '2026-11-17'; // identification plate photo is required for all Heavy Equipment from this date; entries approved earlier are not penalised until re-inspection
 const PHOTO_SIDES = ['ph_f', 'ph_r', 'ph_l', 'ph_rt']; // v1.9.0: four mandatory side photos (front, rear, left, right); 'photo' is now only for extra photos
 const PHOTO4_FROM = '2026-11-25'; // entries approved before this date are not penalised for missing side photos until they are inspected again
-const OPTIONAL_DOCS = ['own', 'insack', 'photo']; // ownership/rental agreement is a commercial matter between the IC and its vendor
+const OPTIONAL_DOCS = ['own', 'insack', 'photo', 'sim2']; // ownership/rental agreement is a commercial matter between the IC and its vendor
 // v1.9.1 Off-site-only vehicles (staff transport outside the project, never enter site): no site induction, QR says OFF-SITE ONLY and is valid to the earliest document expiry.
 function offsite_(i) { return i && i.Category === 'Vehicle' && i.SiteUse === 'offsite'; }
+function bus_(i) { return offsite_(i) && i.Type === 'Bus / minibus'; } // hired off-site bus (outing / staff transport)
 // Insurance mode: 'ack' = signed acknowledgement letter replaces the policy for this entry. Older entries with no choice yet and an acknowledgement on file count as 'ack'.
 function insMode_(i, docs) {
   if (i.InsMode === 'ack' || i.InsMode === 'policy') return i.InsMode;
@@ -68,6 +69,7 @@ function docRules(i, docs) {
   if (i.Category === 'Vehicle') {
     R.push(['stnk', 1, 1], ['pkb', 1, 0], ['swd', 1, 0], ['own', 2, 0], ack ? ['insack', 0, 0] : ['ins', 1, 0], ['sim', 1, 1], ['ind', 2, 1], ['mcu', 1, 0], ['ddc', 1, 0], ['ph_f', 0, 0], ['ph_r', 0, 0], ['ph_l', 0, 0], ['ph_rt', 0, 0], ['photo', 0, 0], ['chk', 0, 0]);
     if (KIR_EXEMPT.indexOf(i.Type) < 0) R.push(['kir', 1, 1]);
+    if (bus_(i)) R.push(['vperm', 2, 0], ['sim2', 1, 1]); // v1.9.2: operator's transport permit or NIB; optional second driver
     if (i.Type === 'Tanker truck') R.push(['b3', 2, 0]);
   } else {
     R.push(['idplate', 0, 0]);
@@ -78,13 +80,14 @@ function docRules(i, docs) {
     if (LIFT.indexOf(i.Type) >= 0) R.push(['rig', 1, 1]);
   }
   // Optional documents (not required for approval or fitness): commercial arrangements between the IC and its vendor.
-  return R.filter(r => !(r[0] === 'ind' && offsite_(i))).map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: (OPTIONAL_DOCS.indexOf(r[0]) >= 0 && r[0] !== 'insack') || (PHOTO_SIDES.indexOf(r[0]) >= 0 && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < PHOTO4_FROM) || (r[0] === 'idplate' && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < IDPLATE_FROM) }));
+  return R.filter(r => !(r[0] === 'ind' && offsite_(i)) && !(r[0] === 'mcu' && bus_(i))).map(r => ({ k: r[0], exp: r[1], num: !!r[2], opt: (OPTIONAL_DOCS.indexOf(r[0]) >= 0 && r[0] !== 'insack') || (PHOTO_SIDES.indexOf(r[0]) >= 0 && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < PHOTO4_FROM) || (r[0] === 'idplate' && i.Status === 'Approved' && String(i.DecidedAt || '').slice(0, 10) < IDPLATE_FROM) }));
 }
 
 function inspItems(i) {
   if (i.Category === 'Vehicle') {
     const L = ['lights', 'brakes', 'tyres', 'horn', 'rev', 'belts', 'mirrors', 'leaks', 'fire', 'aid', 'chock', 'triangle', 'jack', 'glass', 'body', 'ivms', 'interior'];
     if (i.Type === 'Truck' || i.Type === 'Tanker truck' || i.Type === 'Pickup / light truck') L.push('cargo');
+    if (i.Type === 'Bus / minibus') L.push('pbelts', 'pexit'); // passenger seatbelts, emergency exits and hammer
     if (i.Type === 'Truck' || i.Type === 'Tanker truck' || i.Type === 'Foco truck') L.push('cones', 'rotary', 'spark'); // transporters
     return L;
   }
@@ -115,6 +118,8 @@ function doPost(e) {
       case 'requestReset': return out(requestReset(r.email));
       case 'setPin':       return out(setPin(r.email, r.code, r.pin));
       case 'login':        return out(login(r.email, r.pin, r.keep));
+      case 'vendorCode':   return out(vendorCode(r.email, r.company));
+      case 'vendorRegister': return out(withLock_(() => vendorRegister(r)));
       case 'verify':       return out(verifyPublic(r.id, r.t));
       case 'verifyTraining': return out(verifyTraining(r.id, r.t));
       case 'trainLinkInfo':  return out(trainLinkInfo(r.tl));
@@ -159,7 +164,9 @@ function doPost(e) {
         case 'listContacts':   return out(listContacts(user));
         case 'saveContact':    return out(saveContact(user, r.contact));
         case 'removeContact':  return out(removeContact(user, r.contactId));
-        case 'gradeTraining':  return out(gradeTraining(user, r.answers));
+        case 'gradeTraining':  return out(gradeTraining(user, r.answers, r.module));
+        case 'listVendors':    return out(listVendors(user));
+        case 'decideVendor':   return out(decideVendor(user, r));
         case 'saveTraining':   return out(saveTraining(user, r));
         case 'createTrainLink': return out(createTrainLink(user, r));
         case 'saveSignature':  return out(saveSignature(user, r));
@@ -286,6 +293,7 @@ function login(email, pin, keep) {
     throw new Error('Wrong email or PIN. Use "Forgot PIN" to set one.');
   }
   cache.remove(fk);
+  vendorGuard_(u);
   const user = userObj(u);
   return { ok: true, token: newSession(u.vals[0], keep === false ? 1 : SESSION_DAYS), user: user, days: keep === false ? 1 : SESSION_DAYS };
 }
@@ -317,6 +325,7 @@ function auth(token) {
   if (!s || s.Expires < iso()) throw new Error('Session expired. Please sign in again.');
   const u = findUser(s.Email); // role changes and deactivation apply immediately
   if (!u) throw new Error('Session expired. Please sign in again.');
+  vendorGuard_(u);
   return userObj(u);
 }
 function logout(token) {
@@ -328,7 +337,9 @@ function isManager(u) { return norm(u.email) === norm(ADMIN_EMAIL); }
 function needManager(u) { if (!isManager(u)) throw new Error('Manager rights required'); }
 function userObj(u) {
   const co = u.vals[3], officer = norm(co) === 'ecooils' && norm(u.vals[2]).indexOf('hsse officer') === 0;
-  return { email: u.vals[0], name: u.vals[1], role: effRole(u.vals[2], co), company: co, manager: norm(u.vals[0]) === norm(ADMIN_EMAIL), officer: officer };
+  const o = { email: u.vals[0], name: u.vals[1], role: effRole(u.vals[2], co), company: co, manager: norm(u.vals[0]) === norm(ADMIN_EMAIL), officer: officer };
+  if (norm(u.vals[2]) === 'vendor') { const v = vendorRow_(u.vals[0]); o.vendor = true; o.vendorStatus = v ? v.Status : ''; o.tripDate = v ? v.TripDate : ''; }
+  return o;
 }
 // Sheet wording is forgiving: "HSSE Manager", "hsse", "Admin" at EcoOils = HSSE; any contractor company = IC; "viewer" = Viewer.
 function effRole(role, company) {
@@ -342,7 +353,7 @@ function effRole(role, company) {
 function canSee(u, it) { return u.role === 'HSSE' || u.role === 'Viewer' || u.role === 'Inspector' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
 function canWork(u, it) { return u.role === 'HSSE' || (u.role === 'IC' && norm(it.Company) === norm(u.company)); }
 // Actions an HSSE Officer can NOT do (HSSE Manager only). Everything else the HSSE role can do, an officer can do.
-const MGR_ONLY = { deleteItem: 1, voidItem: 1, ageOverride: 1, allowReprint: 1, voidDoc: 1, reconsiderDoc: 1, declineRemoval: 1, editDocExpiry: 1, moveDoc: 1, listOfficers: 1, saveOfficer: 1, setOfficerActive: 1, listContacts: 1, saveContact: 1, removeContact: 1, forceReminders: 1, setContactReminders: 1, getRemindSettings: 1, setRemindSettings: 1, sendRemindersNow: 1, issueWarning: 1, withdrawWarning: 1 };
+const MGR_ONLY = { deleteItem: 1, voidItem: 1, ageOverride: 1, allowReprint: 1, voidDoc: 1, reconsiderDoc: 1, declineRemoval: 1, editDocExpiry: 1, moveDoc: 1, listOfficers: 1, listVendors: 1, decideVendor: 1, saveOfficer: 1, setOfficerActive: 1, listContacts: 1, saveContact: 1, removeContact: 1, forceReminders: 1, setContactReminders: 1, getRemindSettings: 1, setRemindSettings: 1, sendRemindersNow: 1, issueWarning: 1, withdrawWarning: 1 };
 function needHSSE(u) { if (u.role !== 'HSSE') throw new Error('HSSE rights required'); }
 function getItem(id) {
   const it = readAll('Equipment', EQ_H).filter(x => x.ID === id)[0];
@@ -372,6 +383,11 @@ function ruleStates(item, allDocs, today) {
       const a = arr.filter(x => x.k === 'insack')[0];
       if (a && a.s === 'ok') { o.s = 'ok'; o.viaAck = true; o.docId = a.docId; o.pendingId = ''; }
     }
+    // Route B for a hired bus: the driver passed the external-road training (link) recorded against this bus, valid 1 year.
+    if (o.k === 'ddc' && o.s !== 'ok' && bus_(item)) {
+      const tid = trainExtOk_(item.ID, today);
+      if (tid) { o.s = 'ok'; o.viaTrain = tid; o.docId = ''; o.pendingId = ''; }
+    }
     return o;
   });
 }
@@ -384,6 +400,130 @@ function fitness(item, allDocs, today) {
   if (ag.over && !item.AgeOverride) why.push('Over maximum age (' + ag.age + ' years, maximum ' + ag.max + ')');
   if (item.NextInspection && item.NextInspection < today) why.push('Re-inspection overdue (' + item.NextInspection + ')');
   return { state: why.length ? 'SUSPENDED' : 'FIT', why: why };
+}
+
+
+// ---------- v1.9.2 EXTERNAL VENDOR SELF-REGISTRATION (one-time trips, e.g. a hired outing bus) ----------
+// A new vendor opens the same app link, registers with an email code, sets its own PIN, uploads the bus documents and waits for the
+// HSSE Manager (only) to approve the vendor. One login per company: names are normalised so "Blue Bird", "PT Blue Bird Group" and
+// "BLUEBIRD" count as the same company. The login closes after the trip date and the Manager can re-open it.
+const VND_H = ['VendorID', 'Company', 'CompanyKey', 'Contact', 'Phone', 'Email', 'Status', 'TripDate', 'Route', 'Pax', 'Drivers', 'DayPhone', 'SubmittedAt', 'DecidedBy', 'DecidedAt', 'Note', 'ItemID'];
+const CORE_COS = ['EcoOils', 'GSB', 'WEN', 'KKS', 'PBS'];
+const FREE_MAIL = ['gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.id', 'ymail.com', 'outlook.com', 'hotmail.com', 'live.com', 'icloud.com', 'me.com', 'proton.me', 'protonmail.com', 'aol.com', 'gmx.com', 'mail.com', 'zoho.com', 'rocketmail.com'];
+const NOISE_WORDS = ['pt', 'cv', 'tbk', 'ud', 'pd', 'persero', 'group', 'grup', 'the', 'and', 'dan', 'company', 'co', 'ltd', 'inc', 'corp', 'indonesia'];
+function vsheet_() { return tsheet('Vendors', VND_H); }
+function coKey_(n) {
+  return String(n || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(w => w && NOISE_WORDS.indexOf(w) < 0).join('');
+}
+function coSame_(a, b) { return !!a && !!b && (a === b || (Math.min(a.length, b.length) >= 5 && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0))); }
+function cleanCo_(n) { return String(n || '').replace(/[\\\/]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 60); }
+function vendorRows_() { vsheet_(); return readAll('Vendors', VND_H); }
+function vendorRow_(email) { const r = vendorRows_().filter(x => norm(x.Email) === norm(email)); return r[r.length - 1] || null; }
+function vendorGate_(company) {
+  const rows = vendorRows_().filter(x => norm(x.Company) === norm(company));
+  if (rows.length && !rows.some(x => x.Status === 'Approved')) throw new Error('This vendor has not been approved by the HSSE Manager yet');
+}
+function vendorGuard_(u) {
+  if (norm(u.vals[2]) !== 'vendor') return;
+  const v = vendorRow_(u.vals[0]);
+  if (!v || v.Status === 'Rejected') throw new Error('This vendor account is not active. Contact HSSE.');
+  if (v.TripDate && v.TripDate < todayStr()) throw new Error('This vendor login closed after the trip date (' + v.TripDate + '). Contact HSSE to re-open it.');
+}
+function vendorDup_(company, email) {
+  const co = cleanCo_(company), key = coKey_(co), em = norm(email);
+  if (key.length < 3) throw new Error('Enter the full company name');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) throw new Error('Enter a valid email address');
+  const dom = em.split('@')[1], same = 'A company with this name or email is already registered. Use that account (Sign in / Forgot PIN) or contact HSSE.';
+  if (dom.indexOf('ecooils') === 0) throw new Error('Use the vendor\'s own email address, not an EcoOils address');
+  if (CORE_COS.some(n => coSame_(key, coKey_(n)))) throw new Error(same);
+  const us = sheet('Users').getDataRange().getValues();
+  for (let i = 1; i < us.length; i++) {
+    if (norm(us[i][0]) === em) throw new Error(same);
+    if (us[i][3] && coSame_(key, coKey_(us[i][3]))) throw new Error(same);
+  }
+  vendorRows_().forEach(v => {
+    if (v.Status === 'Rejected' && norm(v.Email) !== em) return;
+    if (norm(v.Email) === em || coSame_(key, v.CompanyKey || coKey_(v.Company))) throw new Error(same);
+    const vd = norm(v.Email).split('@')[1];
+    if (vd && vd === dom && FREE_MAIL.indexOf(dom) < 0) throw new Error(same);
+  });
+  return { co: co, key: key, em: em };
+}
+function vendorCode(email, company) {
+  const d = vendorDup_(company, email), cache = CacheService.getScriptCache(), rk = 'vrl_' + d.em, n = Number(cache.get(rk) || 0);
+  if (n >= 3) throw new Error('Too many code requests for this email. Try again in a few hours.');
+  cache.put(rk, String(n + 1), 21600);
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  cache.put('vreg_' + d.em, code, 900);
+  sendMail(d.em, 'Heavy Equipment & Vehicle Register - vendor registration code', 'Your one-time code is ' + code + '. It is valid for 15 minutes.\nIf you did not request this, ignore this email.');
+  return { ok: true };
+}
+function vendorRegister(p) {
+  const d = vendorDup_(p.company, p.email), cache = CacheService.getScriptCache(), key = 'vreg_' + d.em;
+  if (cache.get(key) !== String(p.code || '').trim()) throw new Error('Invalid or expired code');
+  if (!/^\d{4,8}$/.test(String(p.pin || ''))) throw new Error('PIN must be 4 to 8 digits');
+  const contact = String(p.contact || '').trim().slice(0, 80), phone = String(p.phone || '').trim().slice(0, 30), day = String(p.dayPhone || '').trim().slice(0, 30);
+  if (contact.length < 3) throw new Error('Contact name is required');
+  if (!/^\+?[\d\s-]{8,20}$/.test(phone)) throw new Error('Enter a valid phone number');
+  const trip = String(p.tripDate || ''), route = String(p.route || '').trim().slice(0, 200), pax = parseInt(p.pax, 10), drivers = String(p.drivers || '').trim().slice(0, 200);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trip) || trip < todayStr() || trip > plusDays(180)) throw new Error('Trip date must be between today and 180 days ahead');
+  if (route.length < 3) throw new Error('Route / destination is required');
+  if (!(pax >= 1 && pax <= 80)) throw new Error('Number of passengers must be 1 to 80');
+  if (drivers.length < 3) throw new Error('Driver name(s) required');
+  const plate = String(p.plate || '').trim().toUpperCase(), yr = String(p.year || '').trim(), maxY = parseInt(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy'), 10) + 1;
+  if (!plate) throw new Error('Bus plate number is required');
+  if (!/^\d{4}$/.test(yr) || +yr < 1970 || +yr > maxY) throw new Error('Year of manufacture must be a 4-digit year');
+  const dup = readAll('Equipment', EQ_H).filter(x => x.PlateSerial === plate && x.Status !== 'Void')[0];
+  if (dup) throw new Error('This bus is already registered');
+  const salt = Utilities.getUuid(), now = iso(), vid = 'VND-' + Utilities.getUuid().slice(0, 6).toUpperCase();
+  sheet('Users').appendRow([d.em, contact, 'Vendor', d.co, 'TRUE', salt, hash(salt, String(p.pin))]);
+  const item = { Status: 'Draft', LocationStatus: 'Off-site', PlateSerial: plate, UpdatedAt: now, Category: 'Vehicle', Type: 'Bus / minibus', MakeModel: String(p.make || '').trim().slice(0, 80), OperatorName: drivers.split(/[,;\n]/)[0].trim(), OperatorLicenceClass: 'B2', YearMfg: yr, CertOutside: '', SiteUse: 'offsite', Company: d.co,
+    Remarks: 'One-time trip ' + trip + ' | ' + route + ' | ' + pax + ' passengers | drivers: ' + drivers + ' | day phone: ' + (day || phone) };
+  item.ID = nextId('Vehicle');
+  addRow('Equipment', EQ_H, item);
+  vsheet_();
+  addRow('Vendors', VND_H, { VendorID: vid, Company: d.co, CompanyKey: d.key, Contact: contact, Phone: phone + (p.phoneOther ? ' (country code: Other, HSSE to confirm)' : ''), Email: d.em, Status: 'Pending', TripDate: trip, Route: route, Pax: pax, Drivers: drivers, DayPhone: day, SubmittedAt: now, Note: '', ItemID: item.ID });
+  cache.remove(key);
+  audit({ email: d.em }, 'vendorRegister', item.ID, d.co + ' | trip ' + trip);
+  try { alertHSSE('New external vendor registered: ' + d.co, 'Company: ' + d.co + '\nContact: ' + contact + ' ' + phone + ' ' + d.em + '\nTrip: ' + trip + ' | ' + route + ' | ' + pax + ' passengers\nBus: ' + plate + ' (' + item.ID + ')\nOpen the app > Admin > External vendors to review and approve.'); } catch (e) { /* mail failure must not block registration */ }
+  const u = findUser(d.em);
+  return { ok: true, token: newSession(d.em, 1), user: userObj(u), id: item.ID };
+}
+function listVendors(user) {
+  needManager(user);
+  const eq = {}; readAll('Equipment', EQ_H).forEach(i => eq[i.ID] = i);
+  return { ok: true, vendors: vendorRows_().map(v => { const o = strip(v), i = eq[v.ItemID]; o.ItemStatus = i ? i.Status : ''; o.Plate = i ? i.PlateSerial : ''; return o; }).reverse() };
+}
+function decideVendor(user, p) {
+  needManager(user);
+  const v = vendorRows_().filter(x => x.VendorID === p.id)[0];
+  if (!v) throw new Error('Vendor not found');
+  const dec = String(p.decision || ''), why = String(p.reason || '').trim().slice(0, 300), now = iso();
+  if (dec === 'approve') {
+    if (v.Status === 'Rejected') throw new Error('A rejected vendor must register again');
+    v.Status = 'Approved'; v.Note = why;
+  } else if (dec === 'reject') {
+    if (why.length < 5) throw new Error('Give the reason for rejecting this vendor');
+    v.Status = 'Rejected'; v.Note = why;
+    const us = sheet('Users').getDataRange().getValues();
+    for (let i = 1; i < us.length; i++) if (norm(us[i][0]) === norm(v.Email)) sheet('Users').getRange(i + 1, 5).setValue('FALSE');
+    dropSessions(s => norm(s.Email) === norm(v.Email));
+  } else if (dec === 'reopen') {
+    const nd = String(p.tripDate || '');
+    if (v.Status === 'Rejected') throw new Error('A rejected vendor must register again');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nd) || nd < todayStr() || nd > plusDays(180)) throw new Error('New trip date must be between today and 180 days ahead');
+    v.TripDate = nd; v.Note = (v.Note ? v.Note + ' | ' : '') + 'Re-opened to ' + nd;
+  } else throw new Error('Unknown decision');
+  v.DecidedBy = user.email; v.DecidedAt = now; writeRow('Vendors', VND_H, v);
+  audit(user, 'vendor_' + dec, v.ItemID, v.Company + (why ? ' | ' + why : ''));
+  try { sendMail(v.Email, 'Heavy Equipment & Vehicle Register - ' + (dec === 'reject' ? 'vendor registration not approved' : dec === 'approve' ? 'vendor approved' : 'trip login re-opened'),
+    dec === 'reject' ? 'Your vendor registration for ' + v.Company + ' was not approved.\nReason: ' + why : dec === 'approve' ? 'Your company ' + v.Company + ' is approved as a vendor. HSSE will now verify the bus documents and carry out the pre-trip inspection. Sign in to see the status.' : 'Your login is open until ' + v.TripDate + '.'); } catch (e) { /* ignore mail failure */ }
+  return { ok: true };
+}
+let TRX_ = null;
+function trainExtOk_(itemId, today) {
+  if (!TRX_) { tsheet('Training', TRAIN_H); TRX_ = {}; readAll('Training', TRAIN_H).forEach(r => { if (r.Module === 'ext' && r.Passed === 'Yes' && r.ItemID && String(r.ValidUntil) >= today) TRX_[r.ItemID] = r.TrainID; }); }
+  return TRX_[itemId] || '';
 }
 
 // ---------- list ----------
@@ -692,6 +832,7 @@ function approve(user, id, checklist, notes, kindIn) {
   const it = getItem(id), today = todayStr();
   if (['Submitted', 'Approved'].indexOf(it.Status) < 0) throw new Error('Entry is not submitted for inspection');
   if (it.Status === 'Submitted' && it.SubmittedBy === user.email && String(user.email).toLowerCase() !== ADMIN_EMAIL.toLowerCase()) throw new Error('A different HSSE user must approve an entry you submitted');
+  vendorGate_(it.Company);
   const docs = readAll('Documents', DOC_H).filter(d => isTrue(d.Current));
   const rs = ruleStates(it, docs, today), bad = rs.filter(r => !r.opt && r.s !== 'ok');
   if (bad.length) throw new Error('Cannot approve. ' + bad.map(r => (DOCL[r.k] || r.k) + ' (' + r.s + ')').join(', '));
@@ -1066,10 +1207,11 @@ function setRemindSettings(user, hour, weekdays) {
 }
 
 // ---------- DRIVER TRAINING (defensive driving, No Flagman No Movement, Life-Saving Rules) ----------
-const TRAIN_H = ['TrainID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Score', 'Total', 'Passed', 'Lang', 'Signature', 'RecordedBy', 'ValidUntil', 'Photo', 'Token'];
+const TRAIN_H = ['TrainID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Score', 'Total', 'Passed', 'Lang', 'Signature', 'RecordedBy', 'ValidUntil', 'Photo', 'Token', 'Module'];
 const WARN_H = ['WarnID', 'Time', 'Company', 'DriverName', 'DriverID', 'ItemID', 'Plate', 'Violation', 'Level', 'Details', 'IssuedBy', 'Status', 'WithdrawnReason', 'WithdrawnBy'];
 // Correct option index for each of the 10 quiz questions (the page holds the questions; the answer key stays here).
 const QUIZ_KEY = [1, 2, 3, 0, 2, 1, 1, 0, 2, 2, 1, 1];
+const QUIZ_KEY_X = [1, 2, 0, 1, 2, 0, 1, 2, 1, 0]; // v1.9.2 external-road module (passenger bus, public roads): 10 questions, no flagman rule
 const CRIT_Q = [1, 10]; // flagman questions: must be answered correctly to pass (no flagman = stop driving)
 const TRAIN_PASS = 0.8;       // 80% to pass
 const TRAIN_VALID_DAYS = 365; // refresher interval
@@ -1082,13 +1224,14 @@ function tsheet(name, H) {
   return sh;
 }
 function dkey(company, id, name) { return norm(company) + '|' + norm(id || name); }
-function gradeAnswers(a) {
+function gradeAnswers(a, mod) {
   a = Array.isArray(a) ? a : [];
-  let score = 0; QUIZ_KEY.forEach((k, i) => { if (Number(a[i]) === k) score++; });
-  const crit = CRIT_Q.every(i => Number(a[i]) === QUIZ_KEY[i]);
-  return { score: score, total: QUIZ_KEY.length, crit: crit, passed: crit && score / QUIZ_KEY.length >= TRAIN_PASS };
+  const ext = mod === 'ext', K = ext ? QUIZ_KEY_X : QUIZ_KEY;
+  let score = 0; K.forEach((k, i) => { if (Number(a[i]) === k) score++; });
+  const crit = ext ? true : CRIT_Q.every(i => Number(a[i]) === QUIZ_KEY[i]);
+  return { score: score, total: K.length, crit: crit, passed: crit && score / K.length >= TRAIN_PASS };
 }
-function gradeTraining(user, answers) { return Object.assign({ ok: true }, gradeAnswers(answers)); }
+function gradeTraining(user, answers, mod) { return Object.assign({ ok: true }, gradeAnswers(answers, user && user.vendor ? 'ext' : mod)); }
 function trainCompany(user, p) {
   const co = user.role === 'IC' ? user.company : String(p.company || '').trim();
   if (!co) throw new Error('Company is required');
@@ -1102,11 +1245,12 @@ function saveTraining(user, p) {
   if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(String(p.signature || '')) || p.signature.length > 45000) throw new Error('Signature is required');
   if (!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(String(p.photo || '')) || p.photo.length > 45000) throw new Error('A selfie photo of the driver is required');
   if (p.agreed !== true) throw new Error('The driver must accept the declaration');
-  const g = gradeAnswers(p.answers);
+  const mod = (user.vendor || p.module === 'ext') ? 'ext' : 'site';
+  const g = gradeAnswers(p.answers, mod);
   if (!g.passed) throw new Error(g.crit ? 'Quiz not passed (' + g.score + '/' + g.total + ')' : 'The flagman questions must be answered correctly');
   tsheet('Training', TRAIN_H);
   const id = 'T-' + Utilities.getUuid().slice(0, 8), co = trainCompany(user, p), tk = Utilities.getUuid().replace(/-/g, '').slice(0, 10).toUpperCase();
-  addRow('Training', TRAIN_H, { TrainID: id, Time: iso(), Company: co, DriverName: name, DriverID: String(p.driverId || '').trim(), ItemID: p.itemId || '', Plate: p.plate || '', Score: g.score, Total: g.total, Passed: 'Yes', Lang: p.lang || '', Signature: p.signature, RecordedBy: user.email, ValidUntil: plusDays(TRAIN_VALID_DAYS), Photo: p.photo, Token: tk });
+  addRow('Training', TRAIN_H, { TrainID: id, Time: iso(), Company: co, DriverName: name, DriverID: String(p.driverId || '').trim(), ItemID: p.itemId || '', Plate: p.plate || '', Score: g.score, Total: g.total, Passed: 'Yes', Lang: p.lang || '', Signature: p.signature, RecordedBy: user.email, ValidUntil: plusDays(TRAIN_VALID_DAYS), Photo: p.photo, Token: tk, Module: mod });
   audit(user, 'training', id, name + ' ' + g.score + '/' + g.total);
   return { ok: true, trainId: id, token: tk };
 }
@@ -1203,14 +1347,20 @@ function removeDocSign(user, signId) {
 // ---------- shareable Defensive Driving training link (no login for the driver) ----------
 // HSSE or an IC creates a link for one company. Anyone holding the link can take the training and sign, and the record is
 // stored against that company with RecordedBy = "link:<creator>". The link expires, and each link is capped at 300 uses.
-const TL_H = ['LinkID', 'Token', 'Company', 'CreatedBy', 'CreatedAt', 'ExpiresAt', 'Active', 'Uses'];
+const TL_H = ['LinkID', 'Token', 'Company', 'CreatedBy', 'CreatedAt', 'ExpiresAt', 'Active', 'Uses', 'Module', 'ItemID'];
 function withLock_(fn) { const lock = LockService.getScriptLock(); lock.waitLock(30000); try { return fn(); } finally { lock.releaseLock(); } }
 function createTrainLink(user, p) {
   if (user.role !== 'HSSE' && user.role !== 'IC') throw new Error('Not allowed');
   const co = trainCompany(user, p), days = Math.min(60, Math.max(1, parseInt(p.days, 10) || 14));
   tsheet('TrainLinks', TL_H);
   const tok = Utilities.getUuid().replace(/-/g, '').slice(0, 20), exp = plusDays(days);
-  addRow('TrainLinks', TL_H, { LinkID: 'L-' + Utilities.getUuid().slice(0, 6), Token: tok, Company: co, CreatedBy: user.email, CreatedAt: iso(), ExpiresAt: exp, Active: 'TRUE', Uses: '0' });
+  const mod = (user.vendor || p.module === 'ext') ? 'ext' : 'site';
+  let itemId = '';
+  if (mod === 'ext') { // the external-road certificate is recorded against the bus entry it belongs to
+    const mine = readAll('Equipment', EQ_H).filter(x => norm(x.Company) === norm(co) && x.Category === 'Vehicle' && x.Status !== 'Void' && (!p.itemId || x.ID === p.itemId));
+    if (mine.length) itemId = mine[mine.length - 1].ID;
+  }
+  addRow('TrainLinks', TL_H, { LinkID: 'L-' + Utilities.getUuid().slice(0, 6), Token: tok, Company: co, CreatedBy: user.email, CreatedAt: iso(), ExpiresAt: exp, Active: 'TRUE', Uses: '0', Module: mod, ItemID: itemId });
   audit(user, 'trainlink', '', co + ' until ' + exp);
   return { ok: true, token: tok, company: co, expires: exp };
 }
@@ -1224,10 +1374,11 @@ function getTrainLink_(tok) {
   if ((Number(l.Uses) || 0) >= 300) throw new Error('This training link has reached its limit. Ask your HSSE officer for a new one');
   return l;
 }
-function trainLinkInfo(tok) { const l = getTrainLink_(tok); return { ok: true, company: l.Company, expires: l.ExpiresAt }; }
-function pubGrade(tok, answers) { getTrainLink_(tok); return gradeTraining(null, answers); }
+function trainLinkInfo(tok) { const l = getTrainLink_(tok); return { ok: true, company: l.Company, expires: l.ExpiresAt, module: l.Module === 'ext' ? 'ext' : 'site' }; }
+function pubGrade(tok, answers) { const l = getTrainLink_(tok); return gradeTraining(null, answers, l.Module); }
 function pubSaveTraining(tok, p) {
   const l = getTrainLink_(tok);
+  p.module = l.Module === 'ext' ? 'ext' : 'site'; if (l.ItemID) { p.itemId = l.ItemID; if (!p.plate) { const it = readAll('Equipment', EQ_H).filter(x => x.ID === l.ItemID)[0]; if (it) p.plate = it.PlateSerial; } }
   const r = saveTraining({ role: 'IC', company: l.Company, email: 'link:' + l.CreatedBy, name: 'Training link' }, p);
   l.Uses = String((Number(l.Uses) || 0) + 1); writeRow('TrainLinks', TL_H, l);
   return r;
