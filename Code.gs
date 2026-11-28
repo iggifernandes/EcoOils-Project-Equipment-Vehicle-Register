@@ -1,5 +1,5 @@
-// VERSION 1.9.2 | Heavy Equipment & Vehicle Register backend | 2026-11-28
-const VERSION = '1.9.2';
+// VERSION 1.9.3 | Heavy Equipment & Vehicle Register backend | 2026-11-28
+const VERSION = '1.9.3';
 const SESSION_DAYS = 30; // how long a sign-in stays valid on a device
 const DOC_FOLDER_ID = '1V4oGSyvksaeVSVuAS5dRdMwiHJoGArPc'; // Drive folder "Equipment-&-Vehicle-Register": uploaded documents are stored here, one subfolder per entry
 const ADMIN_EMAIL = 'Ignatius.Ambrosio@ecooils.com.my'; // seeded as first HSSE user by setup()
@@ -1362,7 +1362,7 @@ function createTrainLink(user, p) {
   }
   addRow('TrainLinks', TL_H, { LinkID: 'L-' + Utilities.getUuid().slice(0, 6), Token: tok, Company: co, CreatedBy: user.email, CreatedAt: iso(), ExpiresAt: exp, Active: 'TRUE', Uses: '0', Module: mod, ItemID: itemId });
   audit(user, 'trainlink', '', co + ' until ' + exp);
-  return { ok: true, token: tok, company: co, expires: exp };
+  return { ok: true, token: tok, company: co, expires: exp, module: mod };
 }
 function getTrainLink_(tok) {
   tok = String(tok || '');
